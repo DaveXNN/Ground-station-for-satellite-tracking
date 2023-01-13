@@ -13,12 +13,12 @@ from beyond.io.tle import Tle
 from beyond.frames import create_station
 from beyond.config import config
 
-from rotator.rotator import AzimuthStepper, ElevationStepper, Magnetometer
+from rotator.rotator import AzimuthStepper, ElevationStepper, Magnetometer   # import tools for stepper motor control and magnetometer compass
 
-station = create_station('TLS', (49.4862398, 18.0405796, 364.0))
+station = create_station('TLS', (49.4862398, 18.0405796, 364.0))               # define a ground station
 s = sched.scheduler(time.time)
 
-def gpio_init():
+def gpio_init():                                                               # initalization of digital pins
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
 
@@ -26,10 +26,10 @@ def print_notification(notification):
     print(datetime.datetime.utcnow().strftime('%d.%m.%Y   %H:%M:%S UTC'))
     print(notification + "\n")
 
-def utc_epoch_time():
+def utc_epoch_time():                                                          # current epoch utc
     return float(datetime.datetime.utcnow().strftime('%s'))
 
-def epoch_to_datetime(epoch):
+def epoch_to_datetime(epoch):                                                  # convert epoch time to datetime
     return time.strftime('%H:%M:%S', time.localtime(epoch))
 
 class Satellite():
@@ -38,13 +38,13 @@ class Satellite():
         self.delay_before_tracking = 60
         self.create_data(wait_for = 0)
         
-    def create_data(self, wait_for):
+    def create_data(self, wait_for):                                            # create data for the next pass of the satellite
         self.data = []
         self.wait = wait_for
         self.azims, self.elevs = [], []
         self.rowcount = 0
         with open('tle_hamsat') as file:
-            lines = file.readlines()                   #reads all lines in file
+            lines = file.readlines()
             for line in lines:
                 if line.find(self.name) != -1:
                     line_number = lines.index(line)
@@ -65,7 +65,7 @@ class Satellite():
         print_notification("Created data for " + self.name + ".\nNext pass of " + self.name + " will be in " + str(int(self.data[0][0] - utc_epoch_time())) + " seconds (at " + epoch_to_datetime(self.data[0][0]) + " UTC).")
         s.enter(self.data[0][0] - utc_epoch_time() - self.delay_before_tracking, 1, self.track)
 
-    def track(self):
+    def track(self):                                                            # track satellite when it is visible
         self.start_time = self.data[0][0]
         self.start_azimuth = self.data[0][1]
         self.row_number = 1
@@ -99,7 +99,7 @@ class Satellite():
             print_notification("Tracking of " + self.name + " passed.")
             self.create_data(wait_for = 2000) 
         
-def track_hamsats(min_max_elevation):
+def track_hamsats():
     with open('tle_hamsat',"r") as file:
         lines = file.readlines()              
         for line in lines[::3]:
@@ -107,8 +107,8 @@ def track_hamsats(min_max_elevation):
     file.close()
     s.run()
 
-gpio_init()
-magnetometer = Magnetometer()
-az = AzimuthStepper()
-el = ElevationStepper()
-track_hamsats(0)
+gpio_init()                             # inicialization of digital pins
+magnetometer = Magnetometer()           # inicialization of magnetometer
+az = AzimuthStepper()                   # inicialization of azimuth stepper motor
+el = ElevationStepper()                 # inicialization of elevation stepper motor             
+track_hamsats()
