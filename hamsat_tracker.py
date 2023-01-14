@@ -21,7 +21,7 @@ from beyond.io.tle import Tle
 from beyond.frames import create_station
 from beyond.config import config
 
-from rotator.rotator import AzimuthStepper, ElevationStepper, Magnetometer   # import tools for stepper motor control and magnetometer compass
+from rotator.rotator import AzimuthStepper, ElevationStepper, Magnetometer     # import tools for stepper motor control and magnetometer compass from rotator/rotator.py
 
 station = create_station('TLS', (49.4862398, 18.0405796, 364.0))               # define a ground station
 s = sched.scheduler(time.time)
@@ -70,14 +70,14 @@ class Satellite():
                 break
             if orb.event and orb.event.info.startswith("MAX"):
                 self.max_elev = self.elev1
-        print_notification("Created data for " + self.name + ".\nNext pass of " + self.name + " will be in " + str(int(self.data[0][0] - utc_epoch_time())) + " seconds (at " + epoch_to_datetime(self.data[0][0]) + " UTC).")
+        print_notification("Created data for " + self.name + ".\n Next pass of " + self.name + " will be in " + str(int(self.data[0][0] - utc_epoch_time())) + " seconds (at " + epoch_to_datetime(self.data[0][0]) + " UTC).")
         s.enter(self.data[0][0] - utc_epoch_time() - self.delay_before_tracking, 1, self.track)
 
     def track(self):                                                            # track satellite when it is visible
         self.start_time = self.data[0][0]
         self.start_azimuth = self.data[0][1]
         self.row_number = 1
-        if(self.start_time > utc_epoch_time()):
+        if(self.start_time > utc_epoch_time()):                                 # if the satellite is avaiable, start tracking
             print_notification("In " + str(self.delay_before_tracking) + " seconds satellite " + self.name + " will fly over your head.\nHere are some information about the pass:")
             print(self.name.upper() + "\n")
             print("Time start:         " + epoch_to_datetime(self.start_time) + " UTC")
@@ -103,11 +103,11 @@ class Satellite():
             print("Azimuth: " + str(magnetometer.read_azimuth(measurements = 100)) + "*\n")
             print_notification("Tracking of "+ self.name + " just ended.")
             self.create_data(wait_for = 10)
-        else:
+        else:                                                                   # if the satellite could not be tracked, creata data for the nest pass
             print_notification("Tracking of " + self.name + " passed.")
             self.create_data(wait_for = 2000) 
         
-def track_hamsats():
+def track_hamsats():                                                            # create data of all satellites in tle_hamsat.txt
     with open('tle_hamsat',"r") as file:
         lines = file.readlines()              
         for line in lines[::3]:
@@ -115,8 +115,8 @@ def track_hamsats():
     file.close()
     s.run()
 
-gpio_init()                             # inicialization of digital pins
-magnetometer = Magnetometer()           # inicialization of magnetometer
-az = AzimuthStepper()                   # inicialization of azimuth stepper motor
-el = ElevationStepper()                 # inicialization of elevation stepper motor             
+gpio_init()                                                                     # inicialization of digital pins
+magnetometer = Magnetometer()                                                   # inicialization of magnetometer
+az = AzimuthStepper()                                                           # inicialization of azimuth stepper motor
+el = ElevationStepper()                                                         # inicialization of elevation stepper motor             
 track_hamsats()
