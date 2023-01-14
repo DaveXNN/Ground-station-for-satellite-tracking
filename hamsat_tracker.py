@@ -16,28 +16,28 @@ import signal
 import smbus
 import sys
 import threading
-from beyond.dates import Date, timedelta
+from beyond.dates import Date, timedelta                                        # library for satellite positions
 from beyond.io.tle import Tle
 from beyond.frames import create_station
 from beyond.config import config
 
-from rotator.rotator import AzimuthStepper, ElevationStepper, Magnetometer     # import tools for stepper motor control and magnetometer compass from rotator/rotator.py
+from rotator.rotator import AzimuthStepper, ElevationStepper, Magnetometer      # import tools for stepper motor control and magnetometer compass from rotator/rotator.py
 
-station = create_station('TLS', (49.4862398, 18.0405796, 364.0))               # define a ground station
+station = create_station('TLS', (49.4862398, 18.0405796, 364.0))                # define a ground station
 s = sched.scheduler(time.time)
 
-def gpio_init():                                                               # initalization of digital pins
+def gpio_init():                                                                # initalization of digital pins
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
 
-def print_notification(notification):
+def print_notification(notification):                                           # print text with date and time information
     print(datetime.datetime.utcnow().strftime('%d.%m.%Y   %H:%M:%S UTC'))
     print(notification + "\n")
 
-def utc_epoch_time():                                                          # current epoch utc
+def utc_epoch_time():                                                           # current epoch utc
     return float(datetime.datetime.utcnow().strftime('%s'))
 
-def epoch_to_datetime(epoch):                                                  # convert epoch time to datetime
+def epoch_to_datetime(epoch):                                                   # convert epoch time to datetime
     return time.strftime('%H:%M:%S', time.localtime(epoch))
 
 class Satellite():
