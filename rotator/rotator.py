@@ -6,36 +6,36 @@ import sys
 import threading
 import time
 
-bus = smbus.SMBus(1)
+bus = smbus.SMBus(1)                                                # I2C bus for magnetometer
 
-class AzimuthStepper():
-    def __init__(self):
-        self.step_duration = 0.00001
-        self.remain = 0
-        self.ratio = (110/9)
-        self.microstepping = 4
-        self.angle1 = 1.8 / (self.microstepping * self.ratio)
-        self.max_speed = 5
-        self.setting_state = False
-        self.change = 0
-        self.ENABLE = 0
-        self.DIR = 1
-        self.STEP = 4
-        self.A = 8
-        self.B = 9 
-        self.SW = 10
-        GPIO.setup(self.ENABLE, GPIO.OUT)
-        GPIO.setup(self.DIR, GPIO.OUT)
-        GPIO.setup(self.STEP, GPIO.OUT)
-        GPIO.setup(self.A, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-        GPIO.setup(self.B, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-        GPIO.setup(self.SW, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-        GPIO.output(self.ENABLE, GPIO.LOW)
-        GPIO.output(self.DIR, GPIO.HIGH)
-        GPIO.output(self.STEP, GPIO.LOW)
-        GPIO.add_event_detect(self.SW, GPIO.RISING, callback = self.set, bouncetime = 500)
+class AzimuthStepper():                                             # module for azimuth stepper motor control
+    def __init__(self):                                         
+        self.step_duration = 0.00001                                # duration from rising to falling edge               
+        self.remain = 0                                             # remaining angle which rotator must turn 
+        self.ratio = (110/9)                                        # ratio of spur gears
+        self.microstepping = 4                                      # microstepping of stepper motor
+        self.angle1 = 1.8 / (self.microstepping * self.ratio)       # angle of one step of rotator (in degrees)
+        self.max_speed = 5                                          # max speed (in degrees per second)
+        self.setting_state = False                                  # True = setting mode (we set azimuth manualy using rotary encoder)
+        self.change = 0                                             # azimuth change during setting mode
+        self.ENABLE = 0                                             # digital pin, enable stepper motor
+        self.DIR = 1                                                # digital pin, direction of rotation
+        self.STEP = 4                                               # digital pin, step on falling edge
+        self.A = 8                                                  # digital pin, pin A of rotary encoder
+        self.B = 9                                                  # digital pin, pin B of rotary encoder
+        self.SW = 10                                                # digital pin, button of rotary encoder
+        GPIO.setup(self.ENABLE, GPIO.OUT)                           # set ENABLE to output
+        GPIO.setup(self.DIR, GPIO.OUT)                              # set DIR to output                      
+        GPIO.setup(self.STEP, GPIO.OUT)                             # set STEP to output 
+        GPIO.setup(self.A, GPIO.IN, pull_up_down = GPIO.PUD_UP)     # set A to input
+        GPIO.setup(self.B, GPIO.IN, pull_up_down = GPIO.PUD_UP)     # set B to input
+        GPIO.setup(self.SW, GPIO.IN, pull_up_down = GPIO.PUD_UP)    # set SW to input
+        GPIO.output(self.ENABLE, GPIO.LOW)                          # set ENABLE to zero (motor is disabled)
+        GPIO.output(self.DIR, GPIO.HIGH)                            # set DIR to one (positive direction)
+        GPIO.output(self.STEP, GPIO.HIGH)                           # set step to one
+        GPIO.add_event_detect(self.SW, GPIO.RISING, callback = self.set, bouncetime = 500) # external interrupt (when the button in pressed, switches to setting mode)
 
-    def set_speed(self, duration, angle):
+    def set_speed(self, duration, angle):                           # set azimuth speed for duration and angle
         GPIO.output(self.ENABLE, GPIO.HIGH)
         self.start_time = time.time()
         self.duration = duration
@@ -55,7 +55,7 @@ class AzimuthStepper():
             if((time.time() - self.start_time) < (self.duration - self.increment)): 
                 threading.Timer(self.next_t - time.time(), self.create_step).start()
 
-    def create_step(self):
+    def create_step(self):                                              # create timer interrupt for one step
         if (self.remain > 0):
             self.remain -= self.angle1
         else:
@@ -67,20 +67,20 @@ class AzimuthStepper():
         else:
             GPIO.output(self.ENABLE, GPIO.LOW)
 
-    def step(self):
+    def step(self):                                                     # one step
         GPIO.output(self.STEP, GPIO.LOW)
         time.sleep(self.step_duration)
         GPIO.output(self.STEP, GPIO.HIGH)
 
-    def turn_to_azimuth(self, azimuth):
+    def turn_to_azimuth(self, azimuth):                                 # turn rotator to given azimuth
         self.azimuth = azimuth
         self.delta_az = self.azimuth - magnetometer.read_azimuth(measurements = 100)
         self.delta_t = abs(self.delta_az)/self.max_speed
         self.set_speed(self.delta_t, self.delta_az)
         time.sleep(self.delta_t)
 
-    def set(self, channel):
-        GPIO.output(self.ENABLE, GPIO.HIGH)
+    def set(self, channel):                                             # manual azimuth setting
+        GPIO.output(self.ENABLE, GPIO.HIGH)                             # set ENABLE to zero (motor is enabled)
         self.setting_state = not self.setting_state
         if self.setting_state:
             print("Azimuth setting")
@@ -103,33 +103,33 @@ class AzimuthStepper():
         else:
             GPIO.output(self.ENABLE, GPIO.LOW)
             
-class ElevationStepper():
+class ElevationStepper():                                           # module for elevation stepper motor control
     def __init__(self):
-        self.step_duration = 0.00001
-        self.remain = 0
-        self.ratio = 11
-        self.microstepping = 4
-        self.angle1 = 1.8 / (self.microstepping * self.ratio)
-        self.setting_state = False
-        self.change = 0
-        self.ENABLE = 5
-        self.DIR = 6
-        self.STEP = 7
-        self.A = 11
-        self.B = 12
-        self.SW = 13
-        GPIO.setup(self.ENABLE, GPIO.OUT)
-        GPIO.setup(self.DIR, GPIO.OUT)
-        GPIO.setup(self.STEP, GPIO.OUT)
-        GPIO.setup(self.A, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-        GPIO.setup(self.B, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-        GPIO.setup(self.SW, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-        GPIO.output(self.ENABLE, GPIO.LOW)
-        GPIO.output(self.DIR, GPIO.LOW)
-        GPIO.output(self.STEP, GPIO.HIGH)
-        GPIO.add_event_detect(self.SW, GPIO.RISING, callback = self.set, bouncetime = 500)
+        self.step_duration = 0.00001                                # duration from rising to falling edge              
+        self.remain = 0                                             # remaining angle which rotator must turn 
+        self.ratio = 11                                             # ratio of spur gears
+        self.microstepping = 4                                      # microstepping of stepper motor
+        self.angle1 = 1.8 / (self.microstepping * self.ratio)       # angle of one step of rotator (in degrees)
+        self.setting_state = False                                  # True = setting mode (we set azimuth manualy using rotary encoder)
+        self.change = 0                                             # azimuth change during setting mode
+        self.ENABLE = 5                                             # digital pin, enable stepper motor
+        self.DIR = 6                                                # digital pin, direction of rotation
+        self.STEP = 7                                               # digital pin, step on falling edge
+        self.A = 11                                                 # digital pin, pin A of rotary encoder
+        self.B = 12                                                 # digital pin, pin B of rotary encoder
+        self.SW = 13                                                # digital pin, button of rotary encoder
+        GPIO.setup(self.ENABLE, GPIO.OUT)                           # set ENABLE to output
+        GPIO.setup(self.DIR, GPIO.OUT)                              # set DIR to output   
+        GPIO.setup(self.STEP, GPIO.OUT)                             # set STEP to output 
+        GPIO.setup(self.A, GPIO.IN, pull_up_down = GPIO.PUD_UP)     # set A to input
+        GPIO.setup(self.B, GPIO.IN, pull_up_down = GPIO.PUD_UP)     # set B to input
+        GPIO.setup(self.SW, GPIO.IN, pull_up_down = GPIO.PUD_UP)    # set SW to input
+        GPIO.output(self.ENABLE, GPIO.LOW)                          # set ENABLE to zero (motor is disabled)
+        GPIO.output(self.DIR, GPIO.LOW)                             # set DIR to one (positive direction)
+        GPIO.output(self.STEP, GPIO.HIGH)                           # set step to one
+        GPIO.add_event_detect(self.SW, GPIO.RISING, callback = self.set, bouncetime = 500) # external interrupt (when the button in pressed, switches to setting mode)
 
-    def set_speed(self, duration, angle):
+    def set_speed(self, duration, angle):                           # set elevation speed for duration and angle
         GPIO.output(self.ENABLE, GPIO.HIGH)
         self.start_time = time.time()
         self.duration = duration
@@ -145,7 +145,7 @@ class ElevationStepper():
             if((time.time() - self.start_time) < (self.duration - self.increment)): 
                 threading.Timer(self.next_t - time.time(), self.create_step).start()
 
-    def create_step(self):
+    def create_step(self):                                          # create timer interrupt for one step
         if (self.remain > 0):
             self.remain -= self.angle1
         else:
@@ -157,12 +157,12 @@ class ElevationStepper():
         else:
             GPIO.output(self.ENABLE, GPIO.LOW)
 
-    def step(self):
+    def step(self):                                                 # one step
         GPIO.output(self.STEP, GPIO.LOW)
         time.sleep(self.step_duration)
         GPIO.output(self.STEP, GPIO.HIGH)
 
-    def set(self, channel):
+    def set(self, channel):                                         # manual elevation setting
         GPIO.output(self.ENABLE, GPIO.HIGH)
         self.setting_state = not self.setting_state
         if self.setting_state:
@@ -186,29 +186,29 @@ class ElevationStepper():
         else:
             GPIO.output(self.ENABLE, GPIO.LOW)
 
-class Magnetometer():
+class Magnetometer():                                                   # module for magnetometer control
     def __init__(self):
-        self.declination = 3.5                        # define declination angle (in degrees) of location
-        bus.write_byte_data(0x1e, 0, 0x70)            # write to Configuration Register A
-        bus.write_byte_data(0x1e, 0x01, 0xa0)         # Write to Configuration Register B for gain
-        bus.write_byte_data(0x1e, 0x02, 0)            # Write to mode Register for selecting mode
+        self.declination = 3.5                                          # declination angle (in degrees) of location
+        bus.write_byte_data(0x1e, 0, 0x70)                              # write to Configuration Register A
+        bus.write_byte_data(0x1e, 0x01, 0xa0)                           # Write to Configuration Register B for gain
+        bus.write_byte_data(0x1e, 0x02, 0)                              # Write to mode Register for selecting mode
 
     def read_raw_data(self, addr):
-        high = bus.read_byte_data(0x1e, addr)         # Read raw 16-bit value
+        high = bus.read_byte_data(0x1e, addr)                           # Read raw 16-bit value
         low = bus.read_byte_data(0x1e, addr+1)  
-        value = ((high << 8) | low)                   # concatenate higher and lower value
-        if(value > 32768):                            # to get signed value from module
+        value = ((high << 8) | low)                                     # concatenate higher and lower value
+        if(value > 32768):                                              # to get signed value from module
             value = value - 65536
         return value
 
-    def read_azimuth(self, measurements):
+    def read_azimuth(self, measurements):                               # read azimuth
         self.measurements = measurements
         self.sum = 0
-        for x in range(self.measurements):
-            x = self.read_raw_data(addr = 0x03) + 114
-            z = self.read_raw_data(addr = 0x05)
-            y = self.read_raw_data(addr = 0x07) + 128
-            self.heading = float(math.atan2(y, x) * 180/3.14159265359) + self.declination - 176
+        for x in range(self.measurements):                              # x times measure magnetic field
+            x = self.read_raw_data(addr = 0x03) + 114                   # measure in x axis
+            z = self.read_raw_data(addr = 0x05)                         # measure in y axis
+            y = self.read_raw_data(addr = 0x07) + 128                   # measure in z axis
+            self.heading = float(math.atan2(y, x) * 180/3.14159265359) + self.declination - 176 # calculate heading
             if(self.heading > 360):
                 self.heading = self.heading - 360
             if(self.heading < 0):
