@@ -190,8 +190,11 @@ class Magnetometer():                                                   # module
     def __init__(self):
         self.declination = 3.5                                          # declination angle (in degrees) of location
         bus.write_byte_data(0x1e, 0, 0x70)                              # write to Configuration Register A
-        bus.write_byte_data(0x1e, 0x01, 0xa0)                           # Write to Configuration Register B for gain
-        bus.write_byte_data(0x1e, 0x02, 0)                              # Write to mode Register for selecting mode
+        bus.write_byte_data(0x1e, 0x01, 0xa0)                           # write to Configuration Register B for gain
+        bus.write_byte_data(0x1e, 0x02, 0)                              # write to mode Register for selecting mode
+        self.az_cor = -176                                              # azimuth correction
+        self.x_cor = 114                                                # x magnetic field correction
+        self.y_cor = 128                                                # y magnetic field correction
 
     def read_raw_data(self, addr):
         high = bus.read_byte_data(0x1e, addr)                           # Read raw 16-bit value
@@ -202,19 +205,18 @@ class Magnetometer():                                                   # module
         return value
 
     def read_azimuth(self, measurements):                               # read azimuth
-        self.measurements = measurements
         self.sum = 0
-        for x in range(self.measurements):                              # x times measure magnetic field
-            x = self.read_raw_data(addr = 0x03) + 114                   # measure in x axis
-            z = self.read_raw_data(addr = 0x05)                         # measure in y axis
-            y = self.read_raw_data(addr = 0x07) + 128                   # measure in z axis
-            self.heading = float(math.atan2(y, x) * 180/3.14159265359) + self.declination - 176 # calculate heading
+        for x in range(measurements):                                   # x times measure magnetic field
+            x = self.read_raw_data(addr = 0x03) + self.x_cor            # measure magnetic field in x axis
+            z = self.read_raw_data(addr = 0x05)                         # measure magnetic field in y axis
+            y = self.read_raw_data(addr = 0x07) + self.y_cor            # measure magnetic field in z axis
+            self.heading = float(math.atan2(y, x) * 180/3.14159265359) + self.declination + self.az_cor # calculate heading
             if(self.heading > 360):
                 self.heading = self.heading - 360
             if(self.heading < 0):
                 self.heading = self.heading + 360
             self.sum = self.sum + self.heading
-        self.heading = self.sum / self.measurements
+        self.heading = self.sum / measurements
         return self.heading
 
 magnetometer = Magnetometer()
