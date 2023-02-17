@@ -12,7 +12,6 @@ import numpy as np
 import time
 import RPi.GPIO as GPIO
 import sched
-import signal
 import smbus
 import sys
 import threading
