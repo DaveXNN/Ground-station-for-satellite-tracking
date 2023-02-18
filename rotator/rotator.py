@@ -1,7 +1,6 @@
 import math
-import RPi.GPIO as GPIO
-import signal
-import smbus
+import RPi.GPIO as GPIO                                             # library for GPIO pins of Raspberry Pi
+import smbus                                                        # library for I2C communication via GPIO2 and GPIO3 pins
 import sys
 import threading
 import time
