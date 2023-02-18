@@ -79,7 +79,7 @@ class AzimuthStepper():                                             # module for
         time.sleep(self.delta_t)
 
     def set(self, channel):                                             # manual azimuth setting
-        GPIO.output(self.ENABLE, GPIO.HIGH)                             # set ENABLE to zero (motor is enabled)
+        GPIO.output(self.ENABLE, GPIO.HIGH)                             # set ENABLE to one (motor is enabled)
         self.setting_state = not self.setting_state
         if self.setting_state:
             print("Azimuth setting")
@@ -129,7 +129,7 @@ class ElevationStepper():                                           # module for
         GPIO.add_event_detect(self.SW, GPIO.RISING, callback = self.set, bouncetime = 500) # external interrupt (when the button in pressed, switches to setting mode)
 
     def set_speed(self, duration, angle):                           # set elevation speed for duration and angle
-        GPIO.output(self.ENABLE, GPIO.HIGH)
+        GPIO.output(self.ENABLE, GPIO.HIGH)                         # set ENABLE to one (stepper motor is enabled)
         self.start_time = time.time()
         self.duration = duration
         self.angle = angle
