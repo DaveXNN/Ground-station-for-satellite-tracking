@@ -9,11 +9,11 @@
 import datetime
 import math
 import numpy as np
-import time
 import RPi.GPIO as GPIO
 import sched
 import smbus
 import sys
+import time
 import threading
 from beyond.dates import Date, timedelta                                        # library for satellite positions
 from beyond.io.tle import Tle
