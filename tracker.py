@@ -50,7 +50,7 @@ class Satellite():
         self.wait = wait_for
         self.azims, self.elevs = [], []
         self.rowcount = 0
-        with open('tle_hamsat') as file:
+        with open('tle_active') as file:
             lines = file.readlines()
             for line in lines:
                 if line.find(self.name) != -1:
@@ -106,10 +106,10 @@ class Satellite():
             print_notification("Tracking of " + self.name + " passed.")
             self.create_data(wait_for = 2000) 
         
-def track_hamsats():                                                            # create data of all satellites in tle_hamsat.txt
-    with open('tle_hamsat',"r") as file:
+def track_sats():                                                               # create data of all satellites in tle_tracked.txt
+    with open('tle_tracked',"r") as file:
         lines = file.readlines()              
-        for line in lines[::3]:
+        for line in lines:
             a = Satellite((str(lines[lines.index(line)])).strip())
     file.close()
     s.run()
@@ -118,4 +118,4 @@ gpio_init()                                                                     
 magnetometer = Magnetometer()                                                   # inicialization of magnetometer
 az = AzimuthStepper()                                                           # inicialization of azimuth stepper motor
 el = ElevationStepper()                                                         # inicialization of elevation stepper motor             
-track_hamsats()
+track_sats()
