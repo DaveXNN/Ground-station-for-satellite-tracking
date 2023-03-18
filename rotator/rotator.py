@@ -187,7 +187,7 @@ class ElevationStepper():                                           # module for
 
 class Magnetometer():                                                   # module for magnetometer control
     def __init__(self):
-        self.declination = 3.5                                          # declination angle (in degrees) of location
+        self.declination = 5.1                                          # declination angle (in degrees) of ground station location
         bus.write_byte_data(0x1e, 0, 0x70)                              # write to Configuration Register A
         bus.write_byte_data(0x1e, 0x01, 0xa0)                           # write to Configuration Register B for gain
         bus.write_byte_data(0x1e, 0x02, 0)                              # write to mode Register for selecting mode
