@@ -1,3 +1,14 @@
+####################################################################################################
+#                                                                                                  #
+#                                          ROTATOR MODULE                                          #
+#                                                                                                  #
+#          Module for subscribing data from MQTT server and controlling the whole rotator          #
+#                                                                                                  #
+#                                           David Nenicka                                          #
+#                                                                                                  #
+####################################################################################################
+
+
 import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
 
