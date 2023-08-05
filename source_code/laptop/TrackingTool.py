@@ -28,7 +28,7 @@ def write_line_into_txt(filename, line, text):
     out.close()
 
 
-def timedelta_formatter(td):                                        # function that creates td string in format %H %M %S
+def timedelta_formatter(td):                                        # function that creates timedelta string in format %H %M %S
     td_sec = td.seconds                                             # getting the seconds field of the timedelta
     hour_count, rem = divmod(td_sec, 3600)                          # calculating the total hours
     minute_count, second_count = divmod(rem, 60)                    # distributing the remainders
