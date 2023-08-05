@@ -1,3 +1,15 @@
+####################################################################################################
+#                                                                                                  #
+#                                           TRACKING TOOL                                          #
+#                                                                                                  #
+#          GUI for predicting satellite visibility, creating lists of tracked satellites           #
+#                        and subscribing data about rotator current position                       #
+#                                                                                                  #
+#                                           David Nenicka                                          #
+#                                                                                                  #
+####################################################################################################
+
+
 from beyond.dates import Date                                       # for Date object from beyond library
 from beyond.io.tle import Tle                                       # for Tle object from beyond library
 from beyond.frames import create_station                            # for station object from beyond library
@@ -52,8 +64,6 @@ class TrackingTool(Frame):
         self.tracked_satellite = ''
         self.rotator_azimuth = ''
         self.rotator_elevation = ''
-        self.azimuth_arrived = False
-        self.elevation_arrived = False
         self.create_sat_list()
         self.update_tle()
         self.station = self.create_stat()
