@@ -1,5 +1,14 @@
+####################################################################################################
+#                                                                                                  #
+#                                      AZIMUTH STEPPER MODULE                                      #
+#                                                                                                  #
+#                           Module for controlling azimuth stepper motor                           #
+#                                                                                                  #
+#                                           David Nenicka                                          #
+#                                                                                                  #
+####################################################################################################
+
 import math
-import signal
 import smbus
 
 
