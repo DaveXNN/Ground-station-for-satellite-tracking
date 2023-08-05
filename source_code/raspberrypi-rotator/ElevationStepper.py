@@ -1,3 +1,14 @@
+####################################################################################################
+#                                                                                                  #
+#                                     ELEVATION STEPPER MODULE                                     #
+#                                                                                                  #
+#                          Module for controlling elevation stepper motor                          #
+#                                                                                                  #
+#                                           David Nenicka                                          #
+#                                                                                                  #
+####################################################################################################
+
+
 import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
 import threading
