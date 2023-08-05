@@ -1,12 +1,13 @@
 ####################################################################################################
 #                                                                                                  #
-#                                      AZIMUTH STEPPER MODULE                                      #
+#                                       MAGNETOMETER MODULE                                        #
 #                                                                                                  #
-#                           Module for controlling azimuth stepper motor                           #
+#               Module for controlling magnetometer HMC5883L for azimuth measurement               #
 #                                                                                                  #
 #                                           David Nenicka                                          #
 #                                                                                                  #
 ####################################################################################################
+
 
 import math
 import smbus
