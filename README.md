@@ -21,6 +21,8 @@ If we have the latest TLE data, we can track each satellite in the Earth orbit. 
 
 The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motors, two rotary encoders and a magnetometer.
 
+![Raspberry Pi 4 pinout](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
+
 ### Electronic components description
 
 ### List of components
@@ -28,7 +30,7 @@ The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberr
 | Name  | Quantity | Link |
 | :--- | :---: | :---: |
 | Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
-| Stepper motor NEMA17  | 1 |
+| Stepper motor NEMA17  | 2 |  |
 
 - Raspberry Pi 4B
 - 2x stepper motor NEMA17 1,1 Nm
