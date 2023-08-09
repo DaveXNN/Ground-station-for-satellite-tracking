@@ -21,7 +21,7 @@ For the next sections we need to define two important variables - azimuth and el
 
 ## Hardware
 
-The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motor drivers, two rotary encoders and a magnetometer.
+The whole rotator is controlled by computer [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motor drivers, two rotary encoders and a magnetometer.
 
 The rotator has to follow satellite's azimuth and elevation, so we need two stepper motors and two drivers.
 
