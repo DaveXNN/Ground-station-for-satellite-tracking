@@ -1,5 +1,5 @@
 # Antenna rotator for satellite tracking
-This repository contains Antenna rotator for satellite tracking project description. The goal of this project was to design a homemade antenna rotator for tracking any of the satellites in the Earth orbit. The rotator is controlled from a laptop via WiFi. The rotator controll unit is Raspberry Pi 4B with installed Mosquitto broker for subscribing data about satellites from the laptop. Raspberry Pi then controls stepper motors to turn two Yagi antennas into the right direction to the passing satellite. The source code on laptop and on Raspberry Pi is writen in Python 3.9.
+This repository contains Antenna rotator for satellite tracking project description. The goal of this project was to design a homemade antenna rotator for tracking any of the satellites in the Earth orbit. The rotator is controlled from a laptop via WiFi. The rotator controll unit is Raspberry Pi 4 with installed Mosquitto broker for subscribing data about satellites from the laptop. Raspberry Pi then controls stepper motors to turn two Yagi antennas into the right direction to the passing satellite. The source code on laptop and on Raspberry Pi is writen in Python 3.9.
 
 ## Introduction
 
@@ -15,11 +15,21 @@ NEXUS (FO-99)
 2 43937  97.0807 242.3784 0013069 106.8096 253.4596 15.59254066253410
 ```
 
-If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satllites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
+If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
 
 ## Hardware
 
+The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motors, two rotary encoders and a magnetometer.
 
+### Electronic components description
+
+### List of components
+
+- Raspberry Pi 4B
+- 2x stepper motor NEMA17 1,1 Nm
+- 2x stepper motor driver TB6600
+- 2x rotary encoder
+- magnetometer HMC5883L
 
 ## Software
 
