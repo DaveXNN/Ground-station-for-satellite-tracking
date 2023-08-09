@@ -17,26 +17,41 @@ NEXUS (FO-99)
 
 If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
 
+For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
+
 ## Hardware
 
-The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motors, two rotary encoders and a magnetometer.
+The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motor drivers, two rotary encoders and a magnetometer.
+
+The rotator has to follow satellite's azimuth and elevation, so we need two stepper motors and two drivers.
+
+The next picture depicts Raspberry Pi pinout:
 
 ![Raspberry Pi 4 pinout](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
 
-### Electronic components description
-
-### List of components
+In the next table you can see numbers of pins and their usage:
 
 | Name  | Quantity | Link |
 | :--- | :---: | :---: |
 | Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
-| Stepper motor NEMA17  | 2 |  |
+| Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
+| Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
+| Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
+| Rotary encoder | 2 | https://www.laskakit.cz/keyes-ky-040-rotacni-encoder-s-tlacitkem/ |
+| Magnetometer HMC5883L | 1 | https://www.laskakit.cz/3-osy-magnetometr-a-kompas-hmc5883l/ |
 
-- Raspberry Pi 4B
-- 2x stepper motor NEMA17 1,1 Nm
-- 2x stepper motor driver TB6600
-- 2x rotary encoder
-- magnetometer HMC5883L
+### Electronic components description
+
+### List of electronic components
+
+| Name  | Quantity | Link |
+| :--- | :---: | :---: |
+| Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
+| Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
+| Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
+| Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
+| Rotary encoder | 2 | https://www.laskakit.cz/keyes-ky-040-rotacni-encoder-s-tlacitkem/ |
+| Magnetometer HMC5883L | 1 | https://www.laskakit.cz/3-osy-magnetometr-a-kompas-hmc5883l/ |
 
 ## Software
 
