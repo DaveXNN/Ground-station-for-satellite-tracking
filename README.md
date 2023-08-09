@@ -31,14 +31,26 @@ The next picture depicts Raspberry Pi pinout:
 
 In the next table you can see numbers of pins and their usage:
 
-| Name  | Quantity | Link |
-| :--- | :---: | :---: |
-| Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
-| Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
-| Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
-| Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
-| Rotary encoder | 2 | https://www.laskakit.cz/keyes-ky-040-rotacni-encoder-s-tlacitkem/ |
-| Magnetometer HMC5883L | 1 | https://www.laskakit.cz/3-osy-magnetometr-a-kompas-hmc5883l/ |
+| Name | Pin number | GPIO code | Device | Description |
+| :---: | :---: | :---: | :---: | :--- |
+| VCC | 17 | 3V3 | Drivers, Encoders | :--- |
+| AZ.DRIV.-ENABLE | 19 | GPIO10 | Azimuth driver | :--- |
+| AZ.DRIV.-DIR | 21 | GPIO9 | Azimuth driver | :--- |
+| AZ.DRIV.-STEP | 23 | GPIO11 | Azimuth driver | :--- |
+| EL.DRIV.-ENABLE | 11 | GPIO17 | Elevation driver | :--- |
+| EL.DRIV.-DIR | 13 | GPIO27 | Elevation driver | :--- |
+| EL.DRIV.-STEP | 15 | GPIO22 | Elevation driver | :--- |
+| GND | 25 | Ground | Encoders | :--- |
+| AZ.EN.-A | 27 | GPIO0 | Azimuth encoder | :--- |
+| AZ.EN.-B | 29 | GPIO5 | Azimuth encoder | :--- |
+| AZ.EN.-SW | 31 | GPIO6 | Azimuth encoder | :--- |
+| EL.EN.-A | 33 | GPIO13 | Elevation encoder | :--- |
+| EL.EN.-B | 35 | GPIO19 | Elevation encoder | :--- |
+| EL.EN.-SW | 37 | GPIO26 | Elevation encoder | :--- |
+| VCC | 1 | 3V3 | Magnetometer | :--- |
+| GND | 9 | Ground | Magnetometer | :--- |
+| SDA | 3 | GPIO2 | Magnetometer | :--- |
+| SCL | 5 | GPIO3 | Magnetometer | :--- |
 
 ### Electronic components description
 
