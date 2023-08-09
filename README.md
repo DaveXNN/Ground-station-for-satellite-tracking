@@ -29,9 +29,9 @@ The next picture depicts Raspberry Pi pinout:
 
 ![Raspberry Pi 4 pinout](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
 
-In the next table you can see numbers of pins and their usage:
+In the next table you can see numbers of connected pins and their usage:
 
-| Name | Pin number | GPIO code | Device | Description |
+| Name | Pin number | GPIO code | Connected device | Description |
 | :---: | :---: | :---: | :---: | :--- |
 | VCC | 17 | 3V3 | Drivers, Encoders | :--- |
 | AZ.DRIV.-ENABLE | 19 | GPIO10 | Azimuth driver | :--- |
@@ -47,10 +47,10 @@ In the next table you can see numbers of pins and their usage:
 | EL.EN.-A | 33 | GPIO13 | Elevation encoder | :--- |
 | EL.EN.-B | 35 | GPIO19 | Elevation encoder | :--- |
 | EL.EN.-SW | 37 | GPIO26 | Elevation encoder | :--- |
-| VCC | 1 | 3V3 | Magnetometer | :--- |
-| GND | 9 | Ground | Magnetometer | :--- |
-| SDA | 3 | GPIO2 | Magnetometer | :--- |
-| SCL | 5 | GPIO3 | Magnetometer | :--- |
+| VCC | 1 | 3V3 | Magnetometer | 3.3 V power supply for magnetometer |
+| GND | 9 | Ground | Magnetometer | GND |
+| SDA | 3 | GPIO2 | Magnetometer | SDA pin for I2C communication |
+| SCL | 5 | GPIO3 | Magnetometer | SCL pin for I2C communication |
 
 ### Electronic components description
 
