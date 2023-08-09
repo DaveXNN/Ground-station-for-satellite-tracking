@@ -26,7 +26,7 @@ The whole rotator is controlled by compter [Raspberry Pi 4](https://www.raspberr
 ### List of components
 
 | Name  | Quantity | Link |
-| ------------- | ------------- | ------------- |
+| :--- | :---: | :---: |
 | Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
 | Stepper motor NEMA17  | 1 |
 
