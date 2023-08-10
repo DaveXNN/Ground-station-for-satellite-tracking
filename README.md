@@ -23,7 +23,18 @@ For the next sections we need to define two important variables - azimuth and el
 
 The whole rotator is controlled by computer [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motor drivers, two rotary encoders and a magnetometer.
 
-The rotator has to follow satellite's azimuth and elevation, so we need two stepper motors and two drivers.
+The rotator has to follow satellite's azimuth and elevation, so we need two stepper motors and two drivers. Here is a list of electronic components:
+
+| Name  | Quantity | Link |
+| :--- | :---: | :---: |
+| Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
+| Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
+| Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
+| Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
+| Rotary encoder | 2 | https://www.laskakit.cz/keyes-ky-040-rotacni-encoder-s-tlacitkem/ |
+| Magnetometer HMC5883L | 1 | https://www.laskakit.cz/3-osy-magnetometr-a-kompas-hmc5883l/ |
+
+### Raspberry Pi 4
 
 The next picture depicts Raspberry Pi pinout:
 
@@ -52,18 +63,18 @@ In the next table you can see numbers of connected pins and their usage:
 | SDA | 3 | GPIO2 | Magnetometer | SDA pin for I2C communication |
 | SCL | 5 | GPIO3 | Magnetometer | SCL pin for I2C communication |
 
-### Electronic components description
+### Driver TB6600
 
-### List of electronic components
+Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENABLE, DIRECTION and STEP and four outputs. Here is a list of outputs' names and colors of connected cables from stepper motor:
 
-| Name  | Quantity | Link |
-| :--- | :---: | :---: |
-| Raspberry Pi 4B  | 1  | https://www.raspberrypi.com/products/raspberry-pi-4-model-b/ |
-| Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
-| Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
-| Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
-| Rotary encoder | 2 | https://www.laskakit.cz/keyes-ky-040-rotacni-encoder-s-tlacitkem/ |
-| Magnetometer HMC5883L | 1 | https://www.laskakit.cz/3-osy-magnetometr-a-kompas-hmc5883l/ |
+| Name | Color |
+| :---: | :---: |
+| A+ | red |
+| A- | blue |
+| B+ | green |
+| B- | black |
+
+### Stepper motor NEMA23
 
 ## Software
 
