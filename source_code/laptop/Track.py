@@ -16,6 +16,7 @@ class TrackedSatellite:
         self.times = []
         self.azims = []
         self.elevs = []
+        self.start_time = datetime.now()
         self.start_time_seconds = 0
         self.delay_before_tracking = timedelta(seconds=30)
         self.print_info('added to tracking')
@@ -64,7 +65,7 @@ class TrackedSatellite:
                     s.enter(self.start_time_seconds, 1, self.track)
                     self.print_info('created data, AOS: ' + str(self.start_time))
                 else:
-                    self.create_data(delay=-self.start_time_seconds)
+                    self.create_data(delay=self.start_time_seconds)
                 break
 
     def track(self):
@@ -72,11 +73,11 @@ class TrackedSatellite:
             client = paho.Client()  # create mqtt client
             client.username_pw_set('laptop', password='laptop')  # mqtt server authorization
             if client.connect('raspberrypi', port=1883) == 0:
-                print(self.utc(), 'connected to MQTT Broker', sep=', ')
+                print(self.utc(), 'UTC, connected to MQTT Broker')
             else:
-                print(self.utc(), 'could not connect to MQTT Broker', sep=', ')
+                print(self.utc(), 'UTC, could not connect to MQTT Broker')
             self.print_info('in ' + str((self.start_time - self.utc()).seconds) + ' seconds will fly over your head')
-            client.publish('state', 'tracking', 0)
+            client.publish('action', 'start', 0)
             client.publish('satellite', self.name, 0)
             client.publish('start_azimuth', str(self.azims[0]), 0)
             if self.start_time > self.utc():
@@ -95,10 +96,11 @@ class TrackedSatellite:
                 client.publish('delta_elevation', str(delta_el), 0)
                 time.sleep(delta_t)
             client.publish('satellite', '', 0)
-            client.publish('state', 'sleep', 0)
+            client.publish('action', 'stop', 0)
+            time.sleep(1)
             self.print_info('tracking ended')
             client.disconnect()
-            print(self.utc(), 'disconnected from MQTT Broker', sep=', ')
+            print(self.utc(), 'UTC, disconnected from MQTT Broker')
             self.create_data(delay=10)
         else:
             self.print_info('tracking passed')
@@ -111,4 +113,5 @@ if __name__ == '__main__':
     sats = f.readlines()
     for sat in sats:
         TrackedSatellite(sat.strip())
+    f.close()
     s.run()
