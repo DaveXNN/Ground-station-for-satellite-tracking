@@ -12,50 +12,56 @@
 import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
 
-from AzimuthStepper import AzimuthStepper
-from ElevationStepper import ElevationStepper
-
-
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-az = AzimuthStepper()
-el = ElevationStepper()
+
+from AzimuthStepper import azimuth_stepper
+from ElevationStepper import elevation_stepper
+from Publisher import publisher
+
+
 delta_t = 0
-state = 'sleep'
+prev_satellite = ''
 
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print('MQTT client is connected')
+        print('Rotator.py is connected to MQTT broker')
     else:
         print('MQTT client is not connected')
 
 
 def on_message(client, userdata, message):
     global delta_t
-    global state
-    if str(message.topic) == 'state':
-        state = str(message.payload.decode('utf-8'))
-        if state == 'tracking':
-            az.start()
-            el.start()
-        if state == 'sleep':
-            az.stop()
-            el.stop()
-    if str(message.topic) == 'satellite':
-        print('Tracked satellite:', str(message.payload.decode('utf-8')))
-    if str(message.topic) == 'start_azimuth':
-        print('Start azimuth:', str(message.payload.decode('utf-8')))
-        az.turn_to_azimuth(float(str(message.payload.decode('utf-8'))))
-    if str(message.topic) == 'delta_time' and state == 'tracking':
-        delta_t = float(str(message.payload.decode('utf-8')))
-        print('Delta time:', delta_t)
-    if str(message.topic) == 'delta_azimuth' and state == 'tracking':
-        print('Delta azimuth:', str(message.payload.decode('utf-8')))
-        az.set_speed(delta_t, float(str(message.payload.decode('utf-8'))))
-    if str(message.topic) == 'delta_elevation' and state == 'tracking':
-        print('Delta elevation:', str(message.payload.decode('utf-8')))
-        el.set_speed(delta_t, float(str(message.payload.decode('utf-8'))))
+    global prev_satellite
+    topic = str(message.topic)
+    msg = str(message.payload.decode('utf-8'))
+    if topic == 'action':
+        if msg == 'start':
+            publisher.status = 'tracking'
+            print('Tracking started')
+            azimuth_stepper.start()
+            elevation_stepper.start()
+        if msg == 'stop':
+            publisher.status = 'sleeping'
+            print('Tracking ended')
+            azimuth_stepper.stop()
+            elevation_stepper.stop()
+    if topic == 'satellite':
+        satellite = msg
+        publisher.satellite = satellite
+        if prev_satellite != satellite:
+            prev_satellite = satellite
+            if satellite != '':
+                print('Tracked satellite:', satellite)
+     if topic == 'start_azimuth':
+        azimuth_stepper.turn_to_azimuth(float(msg))
+    if topic == 'delta_time':
+        delta_t = float(msg)
+    if topic == 'delta_azimuth':
+        azimuth_stepper.set_speed(delta_t, float(msg))
+    if topic == 'delta_elevation':
+        elevation_stepper.set_speed(delta_t, float(msg))
 
 
 client = paho.Client()
@@ -63,7 +69,7 @@ client.username_pw_set('rotator', password='rotator')
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect('raspberrypi', port=1883)
-client.subscribe('state')
+client.subscribe('action')
 client.subscribe('satellite')
 client.subscribe('start_azimuth')
 client.subscribe('delta_time')
