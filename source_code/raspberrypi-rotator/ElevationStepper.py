@@ -1,134 +1,113 @@
-####################################################################################################
-#                                                                                                  #
-#                                     ELEVATION STEPPER MODULE                                     #
-#                                                                                                  #
-#                          Module for controlling elevation stepper motor                          #
-#                                                                                                  #
-#                                           David Nenicka                                          #
-#                                                                                                  #
-####################################################################################################
-
-
 import RPi.GPIO as GPIO
-import threading
 import time
 
-from Publisher import publisher
+from threading import Timer
+
+from Publisher import publisher as pub
 
 
 class ElevationStepper:
     def __init__(self):
-        self.step_duration = 0.00001
-        self.remain = 0
-        self.ratio = 11
-        self.microstepping = 4
-        self.angle1 = 1.8 / (self.microstepping * self.ratio)
-        self.increment = 0
-        self.elevation = 0
-        self.real_steps = 0
-        self.setting = False
-        self.tracking = False
+        self.sd = 0.00001
+        self.dbs = 0.001
+        self.rat = 11
+        self.ms = 4
+        self.a1 = 1.8 / (self.ms * self.rat)
+        self.el = 0
+        self.rem = 0
+        self.i = 0
         self.ENABLE = 17
         self.DIR = 27
         self.STEP = 22
-        self.A = 13
-        self.B = 19
-        self.SW = 26
         GPIO.setup(self.ENABLE, GPIO.OUT)
         GPIO.setup(self.DIR, GPIO.OUT)
         GPIO.setup(self.STEP, GPIO.OUT)
-        GPIO.setup(self.A, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(self.B, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(self.SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         self.disable_motor()
-        GPIO.output(self.DIR, GPIO.LOW)
-        GPIO.output(self.STEP, GPIO.HIGH)
-#       GPIO.add_event_detect(self.SW, GPIO.RISING, callback=self.set, bouncetime=500)
+        self.set_positive_direction()
 
     def enable_motor(self):
         GPIO.output(self.ENABLE, GPIO.HIGH)
+        GPIO.output(self.STEP, GPIO.HIGH)
 
     def disable_motor(self):
         GPIO.output(self.ENABLE, GPIO.LOW)
+        GPIO.output(self.STEP, GPIO.HIGH)
+
+    def set_positive_direction(self):
+        GPIO.output(self.DIR, GPIO.HIGH)
+
+    def set_negative_direction(self):
+        GPIO.output(self.DIR, GPIO.LOW)
 
     def step(self):
         GPIO.output(self.STEP, GPIO.LOW)
-        time.sleep(self.step_duration)
+        time.sleep(self.sd)
         GPIO.output(self.STEP, GPIO.HIGH)
 
-     def start(self):
-        self.tracking = True
+    def start(self):
         self.enable_motor()
-        self.remain = 0
 
     def stop(self):
-        self.tracking = False
         self.disable_motor()
         print('Final elevation:', self.elevation)
 
     def increase_elevation(self):
-        self.elevation += self.angle1
-        self.remain -= self.angle1
-        self.real_steps += 1
+        self.el += self.a1
+        self.rem -= self.a1
+        pub.el = self.el
 
     def decrease_elevation(self):
-        self.elevation -= self.angle1
-        self.remain += self.angle1
-        self.real_steps -= 1
+        self.el -= self.a1
+        self.rem += self.a1
+        pub.el = self.el
 
-    def set_speed(self, duration, angle):
-        self.real_steps = 0
-        self.start_time = time.time()
-        self.duration = duration
-        self.remain += angle
-        self.increment = (self.angle1 * self.duration) / abs(self.remain)
-        print('EL Duration:', self.duration, 'Remain:', self.remain, 'Increment:', self.increment, 'Expected steps:', int(self.remain/self.angle1))
-        if (time.time() - self.start_time) < (self.duration - self.increment):
-            if self.remain > self.angle1:
-                GPIO.output(self.DIR, GPIO.HIGH)
-                threading.Timer(self.increment, self.create_step).start()
-            if self.remain < -self.angle1:
-                GPIO.output(self.DIR, GPIO.LOW)
-                threading.Timer(self.increment, self.create_step).start()
+    def set_speed(self, dur, a):
+        self.st = time.time()
+        self.dur = dur
+        self.rem += a
+        self.i = (self.a1 * self.dur) / abs(self.rem)
+        if (time.time() - self.st) < (self.dur - self.i - self.sd):
+            if self.rem > self.a1:
+                self.set_positive_direction()
+                Timer(self.i, self.step_forward).start()
+            if self.rem < -self.a1:
+                self.set_negative_direction()
+                Timer(self.i, self.step_backward).start()
 
-    def create_step(self):
+    def step_forward(self):
         self.step()
-        if self.remain > 0:
-            self.increase_elevation()
-        else:
-            self.decrease_elevation()
-        publisher.elevation = self.elevation
-        if (time.time() - self.start_time) < (self.duration - self.increment):
-            threading.Timer(self.increment, self.create_step).start()
-        else:
-            print('EL real steps:', self.real_steps)
+        self.increase_elevation()
+        if (time.time() - self.st) < (self.dur - self.i - self.sd - 0.1):
+            Timer(self.i, self.step_forward).start()
 
-    def set(self, channel):
-        self.setting = not self.setting
-        if self.setting and (not self.tracking):
-            self.enable_motor()
-            print("Elevation setting")
-            change = 0
-            prev = False
-            while GPIO.input(self.SW):
-                encoder_a = GPIO.input(self.A)
-                encoder_b = GPIO.input(self.B)
-                if (not encoder_a) and prev:
-                    if encoder_a == encoder_b:
-                        self.increase_elevation()
-                        change += self.angle1
-                        GPIO.output(self.DIR, GPIO.HIGH)
-                    else:
-                        self.decrease_elevation()
-                        change -= self.angle1
-                        GPIO.output(self.DIR, GPIO.LOW)
-                    time.sleep(0.00005)
-                    self.step()
-                    time.sleep(0.00005)
-                    publisher.elevation = self.elevation
-                prev = encoder_a
-            print("Elevation change: " + str(round(change, 2)) + "*\n")
-            self.disable_motor()
+    def step_backward(self):
+        self.step()
+        self.decrease_elevation()
+        if (time.time() - self.st) < (self.dur - self.i - self.sd - 0.1):
+            Timer(self.i, self.step_backward).start()
 
+    def move_to_elevation(self, el):
+        self.el1 = el
+        self.d_el = self.el1 - self.el
+        self.rem += self.d_el
+        if self.d_el > self.a1:
+            self.set_positive_direction()
+            Timer(self.dbs, self.step_forward2).start()
+        if self.d_el < -(self.a1):
+            self.set_negative_direction()
+            Timer(self.dbs, self.step_backward2).start()
 
+    def step_forward2(self):
+        self.step()
+        self.increase_elevation()
+        if abs(self.el1 - self.el) > self.a1:
+            Timer(self.dbs, self.step_forward2).start()
+
+    def step_backward2(self):
+        self.step()
+        self.decrease_elevation()
+        if abs(self.el1 - self.el) > self.a1:
+            Timer(self.dbs, self.step_backward2).start()
+
+ 
 elevation_stepper = ElevationStepper()

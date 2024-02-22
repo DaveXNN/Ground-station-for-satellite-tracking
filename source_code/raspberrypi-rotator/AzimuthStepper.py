@@ -1,146 +1,137 @@
-####################################################################################################
-#                                                                                                  #
-#                                      AZIMUTH STEPPER MODULE                                      #
-#                                                                                                  #
-#                           Module for controlling azimuth stepper motor                           #
-#                                                                                                  #
-#                                           David Nenicka                                          #
-#                                                                                                  #
-####################################################################################################
-
-
-import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
-import threading
 import time
 
-from Magnetometer import Magnetometer
+from threading import Timer
+
+from Publisher import publisher as pub
 
 
 class AzimuthStepper:
     def __init__(self):
-        self.step_duration = 0.00001
-        self.remain = 0
-        self.ratio = (110/9)
-        self.microstepping = 4
-        self.angle1 = 1.8 / (self.microstepping * self.ratio)
-        self.increment = 0
-        self.next_t = 0
-        self.azimuth0 = 0
-        self.azimuth = 0
-        self.setting_state = False
-        self.change = 0
+        self.sd = 0.00001
+        self.dbs = 0.001
+        self.rat = 12.22222
+        self.ms = 4
+        self.a1 = 1.8 / (self.ms * self.rat)
+        self.az = 0
+        self.rem = 0
+        self.i = 0
         self.ENABLE = 10
         self.DIR = 9
         self.STEP = 11
-        self.A = 0
-        self.B = 5
-        self.SW = 6
+        self.rs = 0
         GPIO.setup(self.ENABLE, GPIO.OUT)
         GPIO.setup(self.DIR, GPIO.OUT)
         GPIO.setup(self.STEP, GPIO.OUT)
-        GPIO.setup(self.A, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(self.B, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(self.SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         self.disable_motor()
-        GPIO.output(self.DIR, GPIO.HIGH)
-        GPIO.output(self.STEP, GPIO.LOW)
-        GPIO.add_event_detect(self.SW, GPIO.RISING, callback=self.set, bouncetime=500)
-        self.magnetometer = Magnetometer()
-        self.client = paho.Client()  # create mqtt client
-        self.client.username_pw_set('azimuthstepper', password='azimuthstepper')  # mqtt server authorization
-        self.publish_thread = threading.Timer(1.0, self.publish_azimuth)
-        self.publish_thread.start()
+        self.set_positive_direction()
 
     def enable_motor(self):
         GPIO.output(self.ENABLE, GPIO.HIGH)
+        GPIO.output(self.STEP, GPIO.HIGH)
 
     def disable_motor(self):
         GPIO.output(self.ENABLE, GPIO.LOW)
+        GPIO.output(self.STEP, GPIO.HIGH)
+
+    def set_positive_direction(self):
+        GPIO.output(self.DIR, GPIO.HIGH)
+
+    def set_negative_direction(self):
+        GPIO.output(self.DIR, GPIO.LOW)
 
     def step(self):
         GPIO.output(self.STEP, GPIO.LOW)
-        time.sleep(self.step_duration)
+        time.sleep(self.sd)
         GPIO.output(self.STEP, GPIO.HIGH)
 
     def start(self):
         self.enable_motor()
-        self.remain = 0
 
     def stop(self):
         self.disable_motor()
-        print('End azimuth:', self.azimuth)
-        print('Magnetometer read azimuth:', str(self.magnetometer.read_azimuth()))
-        self.client.disconnect()
+        print('Final azimuth:', self.az)
 
-    def publish_azimuth(self):
-        if self.client.connect('raspberrypi', port=1883) == 0:
-            if self.azimuth > 360:
-                self.azimuth -= 360
-            if self.azimuth < 0:
-                self.azimuth += 360
-            self.client.publish('azimuth', str(round(self.azimuth, 2)), 0)
-        self.publish_thread = threading.Timer(1.0, self.publish_azimuth)
-        self.publish_thread.start()
+    def increase_azimuth(self): 
+        self.az += self.a1
+        self.rem -= self.a1
+        self.rs += 1
+        if self.az > 360:
+            self.az -= 360
+        pub.az = self.az
 
-    def set_speed(self, duration, angle):
-        self.start_time = time.time()
-        self.duration = duration
-        self.remain += angle
-        if self.remain != 0:
-            if self.remain < 0:
-                GPIO.output(self.DIR, GPIO.LOW)
-            else:
-                GPIO.output(self.DIR, GPIO.HIGH)
-            self.increment = (self.angle1 * self.duration) / abs(self.remain)
-            self.next_t = time.time() + self.increment
-            if (time.time() - self.start_time) < (self.duration - self.increment):
-                threading.Timer(self.next_t - time.time(), self.create_step).start()
+    def decrease_azimuth(self):
+        self.az -= self.a1
+        self.rem += self.a1
+        self.rs -= 1
+        if self.az < 0:
+            self.az += 360
+        pub.az = self.az
 
-    def create_step(self):
-        if self.remain > 0:
-            self.remain -= self.angle1
-            self.azimuth += self.angle1
-        else:
-            self.remain += self.angle1
-            self.azimuth -= self.angle1
+    def set_speed(self, dur, a):
+        self.rs = 0
+        self.st = time.time()
+        self.dur = dur
+        self.rem += a
+        self.i = (self.a1 * self.dur) / abs(self.rem)
+        print('AZ Duration:', self.dur, 'Remain:', self.rem, 'Expected steps:', int(self.rem/self.a1))
+        if (time.time() - self.st) < (self.dur - self.i - self.sd):
+            if self.rem > self.a1:
+                self.set_positive_direction()
+                Timer(self.i, self.step_forward).start()
+            if self.rem < -self.a1:
+                self.set_negative_direction()
+                Timer(self.i, self.step_backward).start()
+
+    def step_forward(self):
         self.step()
-        self.next_t += self.increment
-        if (time.time() - self.start_time) < (self.duration - self.increment):
-            threading.Timer(self.next_t - time.time(), self.create_step).start()
+        self.increase_azimuth()
+        if (time.time() - self.st) < (self.dur - self.i - self.sd - 0.1):
+            Timer(self.i, self.step_forward).start()
+        else:
+            print('AZ real steps:', self.rs)
 
-    def turn_to_azimuth(self, azimuth):
-        self.azimuth0 = azimuth
-        self.azimuth = self.azimuth0
-        self.delta_az = self.azimuth - self.magnetometer.read_azimuth()
-        if self.delta_az > 180:
-            self.delta_az -= 360
-        if self.delta_az < -180:
-            self.delta_az += 360
-        self.set_speed(25, self.delta_az)
-        self.azimuth = self.azimuth0
-        print(self.azimuth)
-        print('Magnetometer read azimuth:', str(self.magnetometer.read_azimuth()))
+    def step_backward(self):
+        self.step()
+        self.decrease_azimuth()
+        if (time.time() - self.st) < (self.dur - self.i - self.sd):
+            Timer(self.i, self.step_backward).start()
+        else:
+            print('AZ real steps:', self.rs)
 
-    def set(self, channel):
-        self.setting_state = not self.setting_state
-        if self.setting_state:
-            self.enable_motor()
-            print("Azimuth setting")
-            self.prev = False
-            while GPIO.input(self.SW):
-                self.encoder_A = GPIO.input(self.A)
-                self.encoder_B = GPIO.input(self.B)
-                if (not self.encoder_A) and self.prev:
-                    if self.encoder_A == self.encoder_B:
-                        self.change += self.angle1
-                        GPIO.output(self.DIR, GPIO.HIGH)
-                    else:
-                        self.change -= self.angle1
-                        GPIO.output(self.DIR, GPIO.LOW)
-                    time.sleep(0.00005)
-                    self.step()
-                self.prev = self.encoder_A
-            print("Azimuth change: " + str(round(self.change, 2)) + "*\n")
-            self.disable_motor()
-            self.change = 0
+    def move_to_azimuth(self, az):
+        self.rs = 0
+        self.az1 = az
+        self.d_az = self.az1 - self.az
+        if self.d_az > 180:
+            self.d_az -= 360
+        if self.d_az < -180:
+            self.d_az += 180
+        if self.d_az > self.a1:
+            self.set_positive_direction()
+            Timer(self.dbs, self.step_forward2).start()
+        if self.d_az < -(self.a1):
+            self.set_negative_direction()
+            Timer(self.dbs, self.step_backward2).start()
+        self.rem += self.d_az
+        print('Previous azimuth:', self.az, 'azimuth change:', self.d_az)
+        print('AZ expected steps:', int(self.d_az/self.a1))
+
+    def step_forward2(self):
+        self.step()
+        self.increase_azimuth()
+        if abs(self.az1 - self.az) > self.a1:
+            Timer(self.dbs, self.step_forward2).start()
+        else:
+            print('AZ real steps:', self.rs, 'new azimuth:', self.az)
+
+    def step_backward2(self):
+        self.step()
+        self.decrease_azimuth()
+        if abs(self.az1 - self.az) > self.a1:
+            Timer(self.dbs, self.step_backward2).start()
+        else:
+            print('AZ real steps:', self.rs, 'new azimuth:', self.az)
+
+
+azimuth_stepper = AzimuthStepper()
