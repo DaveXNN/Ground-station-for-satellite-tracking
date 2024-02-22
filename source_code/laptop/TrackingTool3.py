@@ -1,3 +1,15 @@
+####################################################################################################
+#                                                                                                  #
+#                                           TRACKING TOOL                                          #
+#                                                                                                  #
+#          GUI for predicting satellite visibility, creating lists of tracked satellites           #
+#                        and subscribing data about rotator current position                       #
+#                                                                                                  #
+#                                           David Nenicka                                          #
+#                                                                                                  #
+####################################################################################################
+
+
 import requests                                                     # for downloading TLE data
 import sched
 import time
