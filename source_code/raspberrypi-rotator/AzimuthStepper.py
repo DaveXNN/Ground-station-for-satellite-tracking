@@ -75,7 +75,7 @@ class AzimuthStepper:
         self.rem += a
         self.i = (self.a1 * self.dur) / abs(self.rem)
         print('AZ Duration:', self.dur, 'Remain:', self.rem, 'Expected steps:', int(self.rem/self.a1))
-        if (time.time() - self.st) < (self.dur - self.i - self.sd):
+        if (time.time() - self.st) < (self.dur - self.i - self.sd - 0.1):
             if self.rem > self.a1:
                 self.set_positive_direction()
                 Timer(self.i, self.step_forward).start()
