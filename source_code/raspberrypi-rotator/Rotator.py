@@ -56,10 +56,10 @@ def on_message(client, userdata, message):
 
 
 client = paho.Client()
-client.username_pw_set('rotator', password='rotator')
+client.username_pw_set(<username>, password=<password>)
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect('raspberrypi', port=1883)
+client.connect(<hostname>, port=<port>)
 client.subscribe('action')
 client.subscribe('start_azimuth')
 client.subscribe('delta_time')
