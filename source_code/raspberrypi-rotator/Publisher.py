@@ -6,8 +6,8 @@ from threading import Timer
 class Publisher:
     def __init__(self):
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set('azimuthstepper', password='azimuthstepper')  # mqtt server authorization
-        if self.client.connect('raspberrypi', port=1883) == 0:
+        self.client.username_pw_set(<username>, password=<password>)  # mqtt server authorization
+        if self.client.connect(<hostname>, port=<port>) == 0:
             print('Publisher connected to MQTT Broker', sep=', ')
         else:
             print('Publisher could not connect to MQTT Broker', sep=', ')
