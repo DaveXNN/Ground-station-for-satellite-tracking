@@ -12,8 +12,8 @@ class Mqtt:
     def __init__(self):
         self.client = paho.Client()                                 # create mqtt client
         self.client.username_pw_set('laptop', password='laptop')    # mqtt server authorization
-        self.azimuth = '0.00'
-        self.elevation = '0.00'
+        self.az = '0.00'
+        self.el = '0.00'
         Thread(target=self.try_connect).start()
 
     def try_connect(self):
@@ -39,9 +39,9 @@ class Mqtt:
         topic = str(message.topic)
         msg = str(round(float(str(message.payload.decode('utf-8'))), 2))
         if topic == 'azimuth':
-            self.azimuth = msg
+            self.az = msg
         if topic == 'elevation':
-            self.elevation = msg
+            self.el = msg
 
     def publish_data(self, d_time, d_azimuth, d_elevation):
         self.client.publish('delta_time', str(d_time), 0)

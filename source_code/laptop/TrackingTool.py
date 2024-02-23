@@ -1,15 +1,4 @@
-####################################################################################################
-#                                                                                                  #
-#                                           TRACKING TOOL                                          #
-#                                                                                                  #
-#          GUI for predicting satellite visibility, creating lists of tracked satellites           #
-#                        and subscribing data about rotator current position                       #
-#                                                                                                  #
-#                                           David Nenicka                                          #
-#                                                                                                  #
-####################################################################################################
-
-
+import json
 import requests                                                     # for downloading TLE data
 import sched
 import time
@@ -29,17 +18,8 @@ def print_info(msg):
     print('{0} UTC, {1}'.format(datetime.utcnow(), msg))
 
 
-def read_line_from_txt(filename, line):
-    with open(filename, 'r') as f:
-        content = f.readlines()
-    return content[line].strip()
-
-
 def create_stat():                                                  # create station object
-    with open(configuration_file, 'r') as f:
-        content = f.readlines()
-    return create_station(str(datetime.utcnow()), (float(content[0].strip()), float(content[1].strip()),
-                                                   float(content[2].strip())))
+    return create_station(str(datetime.utcnow()), (station_latitude, station_longitude, station_altitude))
 
 
 def find_tle(sat_name):                                             # create TLE object for a satellite
@@ -58,8 +38,8 @@ def convert_to_decimal(var):
 class TrackingTool(Tk):
     def __init__(self):
         super().__init__()
-        self.program_name = 'Satellite tracking software 1.1'       # program name
-        self.iconbitmap('Satellite.ico')                            # program icon
+        self.program_name = program_name                            # program name
+        self.iconbitmap(icon)                                       # program icon
         self.geometry('1200x600')                                   # window dimensions
         self.bg_color = '#1d1f1b'                                   # background color
         self.text_color = 'white'                                   # text color
@@ -254,13 +234,6 @@ class TrackingTool(Tk):
         self.update_r_info()
         self.listbox_init()
 
-    def start_predicting(self):
-        Thread(target=self.predict, args=(self.sat_entry.get(),)).start()
-
-    def set_polarization(self, pol):
-        self.r_pol.set(pol)
-        mqtt.publish_polarization(pol)
-
     @staticmethod
     def fill_listbox(listbox, content):                             # fill listbox with all satellite names
         listbox.delete(0, END)
@@ -268,16 +241,23 @@ class TrackingTool(Tk):
             listbox.insert(END, item)
 
     @staticmethod
-    def timedelta_formatter(td):                        # function that creates td string in format %H %M %S
+    def timedelta_formatter(td):                                    # function that returns timedelta in format %H %M %S
         hours, remainder = divmod(td.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
 
+    def start_predicting(self):
+        Thread(target=self.predict, args=(self.sat_entry.get(),)).start()
+
+    def set_polarization(self, pol):
+        self.r_pol.set(pol)
+        mqtt.publish_polarization(pol)
+
     def update_r_info(self):
         self.utctime.set(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        self.r_az.set(mqtt.azimuth)
-        self.r_el.set(mqtt.elevation)
+        self.r_az.set(mqtt.az)
+        self.r_el.set(mqtt.el)
         self.re0.after(1000, self.update_r_info)
 
     def listbox_init(self):
@@ -395,18 +375,19 @@ class TrackingTool(Tk):
         self.duration.set('')
 
     def update_tle(self):                                           # update tle data (if it is older than 2 hours)
-        last_update = datetime.strptime(read_line_from_txt(configuration_file, 3), '%Y-%m-%d %H:%M:%S.%f')
+        last_update = datetime.strptime(last_tle_update, '%Y-%m-%d %H:%M:%S.%f')
         if datetime.utcnow() > last_update + timedelta(hours=2):
-            response = requests.get('https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle')
+            response = requests.get(tle_source)
             with open(tle_file, 'wb') as f:
                 f.write(response.content)
             with open(configuration_file, 'r') as g:
-                content = g.readlines()
-                content[3] = str(datetime.utcnow())
+                content = json.load(g)
+                content['last_tle_update'] = str(datetime.utcnow())
             with open(configuration_file, 'w') as h:
-                h.writelines(content)
+                json.dump(content, h)
             print_info('updated TLE data')
-        self.tle_info.set('Last TLE update: {0}'.format(datetime.utcnow().strftime('%d %B %Y %H:%M:%S')))
+            last_update = datetime.utcnow()
+        self.tle_info.set('Last TLE update: {0}'.format(last_update.strftime('%d %B %Y %H:%M:%S UTC')))
 
 
 class TrackedSatellite:
@@ -479,10 +460,19 @@ class TrackedSatellite:
 
 if __name__ == '__main__':
     s = sched.scheduler(time.time)                          # create scheduler object
-    minmaxel = 20                                           # minimal possible MAX elevation of all satellites
-    tle_file = 'tle-active.txt'                             # text file with TLE data
-    configuration_file = 'configuration.txt'                # text file with station configuration
-    tracked_file = 'tracked_sats.txt'                       # text file with list of tracked satellites
+    configuration_file = 'configuration.json'               # json file with program configuration
+    with open(configuration_file) as json_file:
+        config = json.load(json_file)
+        program_name = config['program_name']
+        icon = config['icon']                               # icon of the program window
+        tle_file = config['tle_file']                       # text file with TLE data
+        tracked_file = config['tracked_file']               # text file with list of tracked satellites
+        tle_source = config['tle_source']                   # source of TLE data
+        station_latitude = config['station_latitude']
+        station_longitude = config['station_longitude']
+        station_altitude = config['station_altitude']
+        last_tle_update = config['last_tle_update']
+        min_max = config['min_max']
     station = create_stat()                                 # station object
     app = TrackingTool()                                    # GUI object
     app.mainloop()
