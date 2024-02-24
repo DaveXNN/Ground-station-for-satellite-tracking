@@ -11,14 +11,14 @@ def print_info(msg):
 class Mqtt:
     def __init__(self):
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set('laptop', password='laptop')    # mqtt server authorization
+        self.client.username_pw_set(<username>, password=<password>)    # mqtt server authorization
         self.az = '0.00'
         self.el = '0.00'
         Thread(target=self.try_connect).start()
 
     def try_connect(self):
         try:
-            self.client.connect('raspberrypi', port=1883)
+            self.client.connect(<hostname>, port=<port>)
             self.client.on_connect = self.on_connect
             self.client.on_message = self.on_message
             self.client.subscribe('azimuth')
