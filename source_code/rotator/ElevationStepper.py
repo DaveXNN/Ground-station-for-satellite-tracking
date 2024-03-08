@@ -3,8 +3,6 @@ import time
 
 from threading import Timer
 
-from Publisher import publisher as pub
-
 
 class ElevationStepper:
     def __init__(self):
@@ -16,13 +14,14 @@ class ElevationStepper:
         self.el = 0
         self.rem = 0
         self.i = 0
+        self.finished = True
         self.ENABLE = 17
         self.DIR = 27
         self.STEP = 22
         GPIO.setup(self.ENABLE, GPIO.OUT)
         GPIO.setup(self.DIR, GPIO.OUT)
         GPIO.setup(self.STEP, GPIO.OUT)
-        self.disable_motor()
+        self.enable_motor()
         self.set_positive_direction()
 
     def enable_motor(self):
@@ -44,47 +43,49 @@ class ElevationStepper:
         time.sleep(self.sd)
         GPIO.output(self.STEP, GPIO.HIGH)
 
-    def start(self):
-        self.enable_motor()
-
-    def stop(self):
-        self.disable_motor()
-        print('Final elevation:', self.elevation)
-
     def increase_elevation(self):
         self.el += self.a1
         self.rem -= self.a1
-        pub.el = self.el
 
     def decrease_elevation(self):
         self.el -= self.a1
         self.rem += self.a1
-        pub.el = self.el
 
     def set_speed(self, dur, a):
+        while not self.finished:
+            pass
+        self.finished = False
         self.st = time.time()
         self.dur = dur
         self.rem += a
         self.i = (self.a1 * self.dur) / abs(self.rem)
-        if (time.time() - self.st) < (self.dur - self.i - self.sd):
+        if (time.time() - self.st) < (self.dur - self.i):
             if self.rem > self.a1:
                 self.set_positive_direction()
                 Timer(self.i, self.step_forward).start()
-            if self.rem < -self.a1:
+            elif self.rem < -self.a1:
                 self.set_negative_direction()
                 Timer(self.i, self.step_backward).start()
+            else:
+                self.finished = True
+        else:
+            self.finished = True
 
     def step_forward(self):
         self.step()
         self.increase_elevation()
-        if (time.time() - self.st) < (self.dur - self.i - self.sd - 0.1):
+        if (time.time() - self.st) < (self.dur - self.i):
             Timer(self.i, self.step_forward).start()
+        else:
+            self.finished = True
 
     def step_backward(self):
         self.step()
         self.decrease_elevation()
-        if (time.time() - self.st) < (self.dur - self.i - self.sd - 0.1):
+        if (time.time() - self.st) < (self.dur - self.i):
             Timer(self.i, self.step_backward).start()
+        else:
+            self.finished = True
 
     def move_to_elevation(self, el):
         self.el1 = el
@@ -93,7 +94,7 @@ class ElevationStepper:
         if self.d_el > self.a1:
             self.set_positive_direction()
             Timer(self.dbs, self.step_forward2).start()
-        if self.d_el < -(self.a1):
+        if self.d_el < -self.a1:
             self.set_negative_direction()
             Timer(self.dbs, self.step_backward2).start()
 

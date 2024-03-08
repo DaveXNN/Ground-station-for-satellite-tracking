@@ -8,6 +8,7 @@ GPIO.setwarnings(False)
 from AzimuthStepper import azimuth_stepper as az_st
 from ElevationStepper import elevation_stepper as el_st
 from PolarizationSwitcher import polarization_switcher as pol_sw
+from Publisher import publisher as pub
 
 
 delta_t = 0
@@ -29,18 +30,14 @@ def on_message(client, userdata, message):
     if topic == 'action':
         if msg == 'start':
             tracking = True
-            az_st.start()
-            el_st.start()
         if msg == 'stop':
             tracking = False
-            az_st.stop()
-            el_st.stop()
         if msg =='reset' and not tracking:
-            az_st.start()
-            el_st.start()
             az_st.move_to_azimuth(0)
             el_st.move_to_elevation(0)
         if msg == 'shutdown' and not tracking:
+            az_st.disable_motor()
+            az_st.disable_motor()
             os.system('sudo shutdown -h now')
     if topic == 'start_azimuth' and tracking:
         az_st.move_to_azimuth(float(msg))
@@ -56,10 +53,10 @@ def on_message(client, userdata, message):
 
 
 client = paho.Client()
-client.username_pw_set(<username>, password=<password>)
+client.username_pw_set('rotator', password='rotator')
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect(<hostname>, port=<port>)
+client.connect('raspberrypi', port=1883)
 client.subscribe('action')
 client.subscribe('start_azimuth')
 client.subscribe('delta_time')

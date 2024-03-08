@@ -3,26 +3,40 @@ import RPi.GPIO as GPIO
 
 class PolarizationSwitcher:
     def __init__(self):
-        self.A = 0
-        self.B = 5
-        GPIO.setup(self.A, GPIO.OUT)
-        GPIO.setup(self.B, GPIO.OUT)
-        GPIO.output(self.A, GPIO.LOW)
-        GPIO.output(self.B, GPIO.LOW)
+        self.UHF_REL1 = 0
+        self.UHF_REL2 = 5
+        self.VHF_REL1 = 6
+        self.VHF_REL2 = 13
+        GPIO.setup(self.UHF_REL1, GPIO.OUT)
+        GPIO.setup(self.UHF_REL2, GPIO.OUT)
+        GPIO.setup(self.VHF_REL1, GPIO.OUT)
+        GPIO.setup(self.VHF_REL2, GPIO.OUT)
+        GPIO.output(self.UHF_REL1, GPIO.LOW)
+        GPIO.output(self.UHF_REL2, GPIO.LOW)
+        GPIO.output(self.VHF_REL1, GPIO.LOW)
+        GPIO.output(self.VHF_REL2, GPIO.LOW)
 
     def set(self, pol):
         if pol == 'Vertical':
-            GPIO.output(self.A, GPIO.LOW)
-            GPIO.output(self.B, GPIO.LOW)
+            GPIO.output(self.UHF_REL1, GPIO.LOW)
+            GPIO.output(self.UHF_REL2, GPIO.LOW)
+            GPIO.output(self.VHF_REL1, GPIO.LOW)
+            GPIO.output(self.VHF_REL2, GPIO.LOW)
         if pol == 'Horizontal':
-            GPIO.output(self.A, GPIO.LOW)
-            GPIO.output(self.B, GPIO.HIGH)
+            GPIO.output(self.UHF_REL1, GPIO.LOW)
+            GPIO.output(self.UHF_REL2, GPIO.HIGH)
+            GPIO.output(self.VHF_REL1, GPIO.LOW)
+            GPIO.output(self.VHF_REL2, GPIO.HIGH)
         if pol == 'LHCP':
-            GPIO.output(self.A, GPIO.HIGH)
-            GPIO.output(self.B, GPIO.LOW)
+            GPIO.output(self.UHF_REL1, GPIO.HIGH)
+            GPIO.output(self.UHF_REL2, GPIO.LOW)
+            GPIO.output(self.VHF_REL1, GPIO.HIGH)
+            GPIO.output(self.VHF_REL2, GPIO.LOW)
         if pol == 'RHCP':
-            GPIO.output(self.A, GPIO.HIGH)
-            GPIO.output(self.B, GPIO.HIGH)
+            GPIO.output(self.UHF_REL1, GPIO.HIGH)
+            GPIO.output(self.UHF_REL2, GPIO.HIGH)
+            GPIO.output(self.VHF_REL1, GPIO.HIGH)
+            GPIO.output(self.VHF_REL2, GPIO.HIGH)
 
 
 polarization_switcher = PolarizationSwitcher()
