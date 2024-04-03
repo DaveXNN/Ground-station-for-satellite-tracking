@@ -1,6 +1,6 @@
-import json
+import json                                                         # for working with json files
 import requests                                                     # for downloading TLE data
-import sched
+import sched                                                        # for scheduling satellite passes
 import time
 
 from beyond.dates import Date                                       # for Date object from beyond library
@@ -9,26 +9,13 @@ from beyond.frames import create_station                            # for statio
 from datetime import datetime, timedelta                            # for operations with date and time
 from numpy import degrees                                           # for radian-degree conversion
 from tkinter import *                                               # tkinter package for GUI
-from threading import Thread
+from threading import Thread, Timer                                 # for running more processes together
 
-from Mqtt import mqtt
+from Mqtt import mqtt                                               # for communication with MQTT server
 
 
 def print_info(msg):
     print('{0} UTC, {1}'.format(datetime.utcnow(), msg))
-
-
-def create_stat():                                                  # create station object
-    return create_station(str(datetime.utcnow()), (station_latitude, station_longitude, station_altitude))
-
-
-def find_tle(sat_name):                                             # create TLE object for a satellite
-    with open(tle_file, 'r') as file:                               # open TLE text file
-        lines = file.readlines()
-        for line in lines:
-            if line.find(sat_name) != -1:
-                line_number = lines.index(line)
-                return Tle(lines[line_number + 1] + lines[line_number + 2])
 
 
 def convert_to_decimal(var):
@@ -36,20 +23,39 @@ def convert_to_decimal(var):
 
 
 class TrackingTool(Tk):
-    def __init__(self):
+    def __init__(self, configuration_file):
         super().__init__()
-        self.program_name = program_name                            # program name
-        self.iconbitmap(icon)                                       # program icon
+        self.configuration_file = configuration_file                # json configuration file
+
+        # Load program variables from json configuration file
+        with open(self.configuration_file) as json_file:            # open configuration file
+            conf = json.load(json_file)                             # load content of configuration file
+            self.program_name = conf['program_name']                # program name
+            self.icon = conf['icon']                                # icon file of the program window
+            self.tle_file = conf['tle_file']                        # text file with TLE data
+            self.tle_source = conf['tle_source']                    # source of TLE data
+            self.station_latitude = conf['station_latitude']        # station latitude
+            self.station_longitude = conf['station_longitude']      # station longitude
+            self.station_altitude = conf['station_altitude']        # station altitude
+            self.last_tle_update = datetime.strptime(conf['last_tle_update'], '%Y-%m-%d %H:%M:%S.%f')  # last TLE update
+            self.tle_update_period = timedelta(hours=conf['tle_update_period'])
+            self.min_max = conf['min_max']                          # minimal MAX elevation of a satellite pass
+            self.selected_satellites = conf['tracked_satellites']   # list of tracked satellites
+
+        # Initialize basic GUI variables
+        self.iconbitmap(self.icon)                                  # program icon
         self.geometry('1200x600')                                   # window dimensions
-        self.bg_color = '#1d1f1b'                                   # background color
-        self.text_color = 'white'                                   # text color
+        self.bg_color = '#daa520'                                   # background color #1d1f1b
+        self.text_color = 'black'                                   # text color
         self.configure(bg=self.bg_color)                            # set background color
         self.title(self.program_name)                               # set program title
 
         # List and string variables definition
+        self.track_button_pressed = False                           # True if track button has already been pressed
+        self.tracking = False                                       # True if rotator is currently tracking a sat
         self.satellites = []                                        # list of all satellites on Earth orbit
-        self.selected_satellites = []                               # list of selected satellites
-        self.tracked_satellites = []                                # list of tracked satellites
+        self.tracked_satellites = []                                # list of selected satellites
+        self.tso = []                                               # list of TrackedSatellite objects
         self.ss0 = StringVar()                                      # text variable for searching in listbox0
         self.ss1 = StringVar()                                      # text variable for searching in listbox1
         self.msv0 = StringVar()                                     # text variable for showing number of all satellites
@@ -72,6 +78,7 @@ class TrackingTool(Tk):
         self.r_az = StringVar()
         self.r_el = StringVar()
         self.r_pol = StringVar()
+        self.first_pass_info = StringVar()
         self.tle_info = StringVar()
         self.msv3.set('First pass prediction:')
         self.r_stat.set('sleeping')
@@ -89,8 +96,7 @@ class TrackingTool(Tk):
                                  fg=self.text_color)
         self.right_title.place(relx=0.75, rely=0.10, anchor=CENTER)
         self.ll00 = Label(self, text='Select a satellite by double click and click Predict to predict first pass or Add'
-                                     ' to tracking to track it:', bg=self.bg_color,
-                          fg=self.text_color)
+                                     ' to tracking to track it:', bg=self.bg_color, fg=self.text_color)
         self.ll00.place(relx=0.25, rely=0.15, anchor=CENTER)
         self.ll01 = Label(self, textvariable=self.msv0, bg=self.bg_color, fg=self.text_color)
         self.ll01.place(relx=0.125, rely=0.20, anchor=CENTER)
@@ -130,14 +136,15 @@ class TrackingTool(Tk):
         self.rl06.place(relx=0.775, rely=0.25, anchor=W)
         self.rl06 = Label(self, text='Antenna polarization:', bg=self.bg_color, fg=self.text_color)
         self.rl06.place(relx=0.525, rely=0.30, anchor=W)
+        self.rl10 = Label(self, textvariable=self.first_pass_info, bg=self.bg_color, fg=self.text_color)
+        self.rl10.place(relx=0.750, rely=0.35, anchor=CENTER)
         self.rl11 = Label(self, textvariable=self.msv2, bg=self.bg_color, fg=self.text_color)
-        self.rl11.place(relx=0.750, rely=0.40, anchor=CENTER)
+        self.rl11.place(relx=0.750, rely=0.47, anchor=CENTER)
         self.rl12 = Label(self, textvariable=self.tle_info, bg=self.bg_color, fg=self.text_color)
         self.rl12.place(relx=0.750, rely=0.95, anchor=CENTER)
 
         # Entries definition
-        self.sat_entry = Entry(textvariable=self.ss0, bg=self.bg_color, fg=self.text_color,
-                               highlightbackground='black')
+        self.sat_entry = Entry(textvariable=self.ss0, bg=self.bg_color, fg=self.text_color)
         self.sat_entry.place(relx=0.125, rely=0.40, relwidth=0.2, anchor=CENTER)
         self.sat_entry.bind('<Return>', self.search0)
         self.tsat_entry = Entry(textvariable=self.ss1, bg=self.bg_color, fg=self.text_color)
@@ -201,38 +208,41 @@ class TrackingTool(Tk):
         self.rhcp_pol = Button(self, text='RHCP', command=lambda: self.set_polarization('RHCP'),
                                bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.rhcp_pol.place(relx=0.925, rely=0.30, relwidth=0.05, anchor=W)
-        self.reset_button = Button(self, text='Reset', command=lambda: mqtt.publish_action('reset'),
-                                   bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.reset_button.place(relx=0.625, rely=0.35, relwidth=0.1, anchor=CENTER)
-        self.reset_button = Button(self, text='Shut down', command=lambda: mqtt.publish_action('shutdown'),
-                                   bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.reset_button.place(relx=0.875, rely=0.35, relwidth=0.1, anchor=CENTER)
-
-        # Scrollbar definition
-        self.scrollbar0 = Scrollbar(self, bg=self.bg_color)
-        self.scrollbar0.place(relx=0.225, rely=0.30, relwidth=0.015, relheight=0.15, anchor=W)
-        self.scrollbar1 = Scrollbar(self, bg=self.bg_color)
-        self.scrollbar1.place(relx=0.475, rely=0.30, relwidth=0.015, relheight=0.15, anchor=W)
-        self.scrollbar2 = Scrollbar(self, bg=self.bg_color)
-        self.scrollbar2.place(relx=0.8575, rely=0.45, relwidth=0.015, relheight=0.45, anchor=N)
+        self.shutdown_button = Button(self, text='Shut down', command=lambda: mqtt.publish_action('shutdown'),
+                                      bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.shutdown_button.place(relx=0.75, rely=0.42, relwidth=0.1, anchor=CENTER)
 
         # Listbox definition
-        self.listbox0 = Listbox(self, yscrollcommand=self.scrollbar0.set, bg=self.bg_color, fg=self.text_color)
+        self.listbox0 = Listbox(self, bg=self.bg_color, fg=self.text_color, borderwidth=0, highlightbackground='black')
         self.listbox0.place(relx=0.125, rely=0.30, relwidth=0.2, relheight=0.15, anchor=CENTER)
         self.listbox0.bind('<Double-1>', self.go0)
-        self.scrollbar0.config(command=self.listbox0.yview)
-        self.listbox1 = Listbox(self, yscrollcommand=self.scrollbar1.set, bg=self.bg_color, fg=self.text_color)
+        self.listbox1 = Listbox(self, bg=self.bg_color, fg=self.text_color, borderwidth=0, highlightbackground='black')
         self.listbox1.place(relx=0.375, rely=0.30, relwidth=0.2, relheight=0.15, anchor=CENTER)
         self.listbox1.bind('<Double-1>', self.go1)
-        self.scrollbar1.config(command=self.listbox1.yview)
-        self.listbox2 = Listbox(self, yscrollcommand=self.scrollbar2.set, bg=self.bg_color, fg=self.text_color)
-        self.listbox2.place(relx=0.75, rely=0.45, relwidth=0.2, relheight=0.45, anchor=N)
-        self.scrollbar2.config(command=self.listbox2.yview)
+        self.listbox2 = Listbox(self, bg=self.bg_color, fg=self.text_color, borderwidth=0, highlightbackground='black')
+        self.listbox2.place(relx=0.75, rely=0.50, relwidth=0.2, relheight=0.40, anchor=N)
 
         # run basic functions
-        self.update_tle()
         self.update_r_info()
         self.listbox_init()
+        update_time = datetime.utcnow() - self.last_tle_update
+        if update_time > self.tle_update_period:
+            self.update_tle()
+        else:
+            self.tle_info.set('Last TLE update: {0}'.format(self.last_tle_update.strftime('%d %B %Y %H:%M:%S UTC')))
+            Timer(update_time.total_seconds(), self.update_tle).start()
+
+    def create_stat(self):                                          # create station object
+        return create_station(str(datetime.utcnow()),
+                              (self.station_latitude, self.station_longitude, self.station_altitude))
+
+    def find_tle(self, sat_name):                                   # create TLE object for a satellite
+        with open(self.tle_file, 'r') as file:                      # open TLE text file
+            lines = file.readlines()
+            for line in lines:
+                if line.find(sat_name) != -1:
+                    line_number = lines.index(line)
+                    return Tle(lines[line_number + 1] + lines[line_number + 2])
 
     @staticmethod
     def fill_listbox(listbox, content):                             # fill listbox with all satellite names
@@ -249,7 +259,7 @@ class TrackingTool(Tk):
     def start_predicting(self):
         Thread(target=self.predict, args=(self.sat_entry.get(),)).start()
 
-    def set_polarization(self, pol):
+    def set_polarization(self, pol):                                # sets antenna polarization
         self.r_pol.set(pol)
         mqtt.publish_polarization(pol)
 
@@ -258,13 +268,15 @@ class TrackingTool(Tk):
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.r_az.set(mqtt.az)
         self.r_el.set(mqtt.el)
+        if self.tracking:
+            self.r_stat.set('tracking')
+        else:
+            self.r_stat.set('sleeping')
         self.re0.after(1000, self.update_r_info)
 
     def listbox_init(self):
-        with open(tle_file, 'r') as file:
+        with open(self.tle_file, 'r') as file:
             self.satellites = sorted(list(map(str.strip, file.readlines()[::3])))
-        with open(tracked_file, 'r') as f:
-            self.selected_satellites = sorted(list(map(str.strip, f.readlines())))
         self.update_listbox0()
         self.update_listbox1()
         self.update_listbox2()
@@ -303,24 +315,45 @@ class TrackingTool(Tk):
 
     def add_to_tracked(self):                                       # add satellite to tracking
         sat = self.sat_entry.get()
-        if sat not in self.selected_satellites:
+        if sat in self.satellites and sat not in self.selected_satellites:
             self.selected_satellites.append(sat)
         self.update_listbox1()
+        self.ss0.set('')
 
     def remove_from_tracked(self):                                  # remove satellite from tracking
         sat = self.tsat_entry.get()
         if sat in self.selected_satellites:
             self.selected_satellites.remove(sat)
         self.update_listbox1()
+        self.ss1.set('')
 
     def track_sats(self):                                           # track all satellites in track_satellites list
-        self.tracked_satellites = sorted(self.selected_satellites)
-        self.update_listbox2()
-        with open(tracked_file, 'w') as f:
-            f.writelines('\n'.join(self.tracked_satellites))
-        for sat in self.tracked_satellites:
-            TrackedSatellite(sat)
-        s.run()
+        if not self.track_button_pressed:
+            self.track_button_pressed = True
+            self.tracked_satellites = sorted(self.selected_satellites)
+            self.update_listbox2()
+            with open(self.configuration_file, 'r') as g:
+                content = json.load(g)
+                content['tracked_satellites'] = self.tracked_satellites
+            with open(self.configuration_file, 'w') as h:
+                json.dump(content, h, indent=4)
+            self.tso = [TrackedSatellite(sat) for sat in self.tracked_satellites]
+            self.find_first_pass()
+            s.run()
+
+    def find_first_pass(self):
+        if len(self.tso) > 1:
+            my_dict = {}
+            for x in self.tso:
+                my_dict[x.name] = x.start_time
+            sorted_list = sorted(my_dict.items(), key=lambda p: p[1], reverse=False)
+            first_pass = list(sorted_list[0])
+            first_sat = first_pass[0]
+            if first_sat == self.r_tracked_satellite.get():
+                first_pass = list(sorted_list[1])
+                first_sat = first_pass[0]
+            first_pass_time = datetime.strftime(first_pass[1], '%d %B %Y %H:%M:%S UTC')
+            self.first_pass_info.set('Next pass: {0}, AOS: {1}'. format(first_sat, first_pass_time))
 
     def update_listbox0(self):
         self.fill_listbox(self.listbox0, self.satellites)
@@ -337,7 +370,7 @@ class TrackingTool(Tk):
     def predict(self, sat):                                         # create data about the pass of selected satellite
         self.empty_prediction_data()
         if sat in self.satellites:
-            for orb in station.visibility(find_tle(sat).orbit(), start=Date.now(), stop=timedelta(hours=24),
+            for orb in station.visibility(self.find_tle(sat).orbit(), start=Date.now(), stop=timedelta(hours=24),
                                           step=timedelta(seconds=100), events=True):
                 if orb.event and orb.event.info.startswith('AOS'):
                     self.date.set(orb.date.strftime('%d %B %Y'))
@@ -346,10 +379,10 @@ class TrackingTool(Tk):
                 if orb.event and orb.event.info.startswith('MAX'):
                     self.max_time.set(orb.date.strftime('%H:%M:%S'))
                     self.max_az.set(convert_to_decimal(degrees(-orb.theta) % 360))
-                    self.max_el.set(convert_to_decimal(degrees(orb.phi)))
+                    self.max_el.set(convert_to_decimal(degrees(orb.phi)))       
                 if orb.event and orb.event.info.startswith('LOS'):
                     self.los_time.set(orb.date.strftime('%H:%M:%S'))
-                    self.los_az.set(convert_to_decimal(degrees(-orb.theta) % 360))
+                    self.los_az.set(str(round((degrees(-orb.theta) % 360), 2)))
                     break
             if self.aos_time.get() == '':
                 self.empty_prediction_data()
@@ -375,19 +408,18 @@ class TrackingTool(Tk):
         self.duration.set('')
 
     def update_tle(self):                                           # update tle data (if it is older than 2 hours)
-        last_update = datetime.strptime(last_tle_update, '%Y-%m-%d %H:%M:%S.%f')
-        if datetime.utcnow() > last_update + timedelta(hours=2):
-            response = requests.get(tle_source)
-            with open(tle_file, 'wb') as f:
+        response = requests.get(self.tle_source)
+        if response.ok:
+            self.last_tle_update = datetime.utcnow()
+            with open(self.tle_file, 'wb') as f:
                 f.write(response.content)
-            with open(configuration_file, 'r') as g:
+            with open(self.configuration_file, 'r') as g:
                 content = json.load(g)
-                content['last_tle_update'] = str(datetime.utcnow())
-            with open(configuration_file, 'w') as h:
+                content['last_tle_update'] = str(self.last_tle_update)
+            with open(self.configuration_file, 'w') as h:
                 json.dump(content, h, indent=4)
-            print_info('updated TLE data')
-            last_update = datetime.utcnow()
-        self.tle_info.set('Last TLE update: {0}'.format(last_update.strftime('%d %B %Y %H:%M:%S UTC')))
+            self.tle_info.set('Last TLE update: {0}'.format(self.last_tle_update.strftime('%d %B %Y %H:%M:%S UTC')))
+        Timer(self.tle_update_period.total_seconds(), self.update_tle).start()
 
 
 class TrackedSatellite:
@@ -395,12 +427,15 @@ class TrackedSatellite:
         self.name = name
         self.times, self.azims, self.elevs = [], [], []
         self.start_time = datetime.now()
+        self.max_el = 0
+        self.delay = 0
         self.start_time_seconds = 0
         self.delay_before_tracking = timedelta(seconds=10)
-        self.tle = find_tle(name)
+        self.tle = app.find_tle(name)
         self.create_data(delay=0)
 
     def create_data(self, delay):
+        self.delay = delay
         self.times.clear()
         self.azims.clear()
         self.elevs.clear()
@@ -409,31 +444,35 @@ class TrackedSatellite:
             self.times.append(datetime.strptime(str(orb.date), '%Y-%m-%dT%H:%M:%S.%f UTC'))
             self.azims.append(degrees(-orb.theta) % 360)
             self.elevs.append(degrees(orb.phi))
+            if orb.event and orb.event.info.startswith('MAX'):
+                self.max_el = degrees(orb.phi)
             if orb.event and orb.event.info.startswith('LOS'):
                 self.start_time = self.times[0]
                 self.start_time_seconds = (self.start_time - datetime.utcnow() - self.delay_before_tracking).seconds
-                if self.start_time_seconds > 0:
+                if self.max_el > app.min_max and self.elevs[0] < 0.1:
+                    self.delay = 0
                     s.enter(self.start_time_seconds, 1, self.start_tracking)
-                    print_info('{0} created data, AOS: {1}'.format(self.name,
-                                                                   self.start_time.strftime('%Y-%m-%d %H:%M:%S')))
+                    app.find_first_pass()
+                    print_info('{0} created data, AOS: {1}, MAX elevation: {2}'.format(
+                        self.name, self.start_time.strftime('%Y-%m-%d %H:%M:%S'), self.max_el))
                 else:
-                    self.create_data(delay=self.start_time_seconds + 1000)
-                    print('Next try', self.name)
+                    self.create_data(delay=self.delay + 5000)
                 break
 
     def start_tracking(self):
         Thread(target=self.track).start()
 
     def track(self):
-        if app.r_stat.get() == 'sleeping':
+        if not app.tracking:
             if self.start_time > datetime.utcnow():
-                wait_time = (self.start_time - datetime.utcnow()).total_seconds()
-                app.r_stat.set('tracking')
-                mqtt.publish_action('start')
-                mqtt.publish_start_azimuth(self.azims[0])
+                app.tracking = True
                 app.r_tracked_satellite.set(self.name)
                 app.predict(self.name)
+                app.find_first_pass()
+                mqtt.publish_action('start')
+                wait_time = (self.start_time - datetime.utcnow()).total_seconds()
                 print_info('{0} will fly over your head in {1} seconds'.format(self.name, int(wait_time)))
+                mqtt.publish_start_azimuth(self.azims[0])
                 time.sleep(wait_time)
                 print_info('{0} tracking started'.format(self.name))
                 for x in range(len(self.times) - 1):
@@ -447,9 +486,9 @@ class TrackedSatellite:
                     mqtt.publish_data(delta_t, delta_az, delta_el)
                     time.sleep(delta_t)
                 mqtt.publish_action('stop')
-                app.r_stat.set('sleeping')
-                app.r_tracked_satellite.set('none')
                 print_info('{0} tracking ended'.format(self.name))
+                app.tracking = False
+                app.r_tracked_satellite.set('none')
             else:
                 print_info('{0} tracking passed'.format(self.name))
         else:
@@ -460,19 +499,6 @@ class TrackedSatellite:
 
 if __name__ == '__main__':
     s = sched.scheduler(time.time)                          # create scheduler object
-    configuration_file = 'configuration.json'               # json file with program configuration
-    with open(configuration_file) as json_file:
-        config = json.load(json_file)
-        program_name = config['program_name']
-        icon = config['icon']                               # icon of the program window
-        tle_file = config['tle_file']                       # text file with TLE data
-        tracked_file = config['tracked_file']               # text file with list of tracked satellites
-        tle_source = config['tle_source']                   # source of TLE data
-        station_latitude = config['station_latitude']
-        station_longitude = config['station_longitude']
-        station_altitude = config['station_altitude']
-        last_tle_update = config['last_tle_update']
-        min_max = config['min_max']
-    station = create_stat()                                 # station object
-    app = TrackingTool()                                    # GUI object
+    app = TrackingTool('configuration.json')                # GUI object
+    station = app.create_stat()                             # station object
     app.mainloop()
