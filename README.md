@@ -44,20 +44,13 @@ In the next table you can see numbers of connected pins and their usage:
 
 | Name | Pin number | GPIO code | Connected device | Description |
 | :---: | :---: | :---: | :---: | :--- |
-| VCC | 17 | 3V3 | Drivers, Encoders | :--- |
+| VCC | 17 | 3V3 | Drivers | :--- |
 | AZ.DRIV.-ENABLE | 19 | GPIO10 | Azimuth driver | :--- |
 | AZ.DRIV.-DIR | 21 | GPIO9 | Azimuth driver | :--- |
 | AZ.DRIV.-STEP | 23 | GPIO11 | Azimuth driver | :--- |
 | EL.DRIV.-ENABLE | 11 | GPIO17 | Elevation driver | :--- |
 | EL.DRIV.-DIR | 13 | GPIO27 | Elevation driver | :--- |
 | EL.DRIV.-STEP | 15 | GPIO22 | Elevation driver | :--- |
-| GND | 25 | Ground | Encoders | :--- |
-| AZ.EN.-A | 27 | GPIO0 | Azimuth encoder | :--- |
-| AZ.EN.-B | 29 | GPIO5 | Azimuth encoder | :--- |
-| AZ.EN.-SW | 31 | GPIO6 | Azimuth encoder | :--- |
-| EL.EN.-A | 33 | GPIO13 | Elevation encoder | :--- |
-| EL.EN.-B | 35 | GPIO19 | Elevation encoder | :--- |
-| EL.EN.-SW | 37 | GPIO26 | Elevation encoder | :--- |
 | VCC | 1 | 3V3 | Magnetometer | 3.3 V power supply for magnetometer |
 | GND | 9 | Ground | Magnetometer | GND |
 | SDA | 3 | GPIO2 | Magnetometer | SDA pin for I2C communication |
