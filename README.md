@@ -31,8 +31,6 @@ The rotator has to follow satellite's azimuth and elevation, so we need two step
 | Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
 | Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
 | Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
-| Rotary encoder | 2 | https://www.laskakit.cz/keyes-ky-040-rotacni-encoder-s-tlacitkem/ |
-| Magnetometer HMC5883L | 1 | https://www.laskakit.cz/3-osy-magnetometr-a-kompas-hmc5883l/ |
 
 ### Raspberry Pi 4
 
@@ -52,9 +50,6 @@ In the next table you can see numbers of connected pins and their usage:
 | EL.DRIV.-DIR | 13 | GPIO27 | Elevation driver | :--- |
 | EL.DRIV.-STEP | 15 | GPIO22 | Elevation driver | :--- |
 | VCC | 1 | 3V3 | Magnetometer | 3.3 V power supply for magnetometer |
-| GND | 9 | Ground | Magnetometer | GND |
-| SDA | 3 | GPIO2 | Magnetometer | SDA pin for I2C communication |
-| SCL | 5 | GPIO3 | Magnetometer | SCL pin for I2C communication |
 
 ### Driver TB6600
 
