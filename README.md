@@ -66,4 +66,6 @@ Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. I
 
 ## Software
 
-## Tracking process
+### GUI - station computer
+
+### Raspberry Pi - rotator control
