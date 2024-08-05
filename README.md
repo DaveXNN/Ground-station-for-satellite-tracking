@@ -34,7 +34,7 @@ The rotator has to follow satellite's azimuth and elevation, so we need two step
 
 ### Raspberry Pi 4
 
-The next picture depicts Raspberry Pi pinout:
+The next picture depicts Raspberry Pi 4B pinout:
 
 ![Raspberry Pi 4 pinout](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
 
