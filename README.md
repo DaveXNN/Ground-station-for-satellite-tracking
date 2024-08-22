@@ -8,25 +8,9 @@ Of course there are many proffesional rotators available to buy in the internet 
 
 The rotator frame is made from aluminium and wood and has dimensions of 240x240x305 mm. There are also 4 bearings installed, 2 to hold azimuth rod and 2 to hold elevation rod. It's also designed to mantle and dismantle easily, so each of the rods can be installed or removed quickly. Spur gears are used to make the rods to move. They are available with all 3D-printed parts in this repository (https://github.com/DaveXNN/Ground-station-for-satellite-tracking/tree/main/stl-files/rotator).
 
-Each satellite has data about its position in the Earth orbit called TLE (Two-Line Element). They are updated every 2 hours from URL: https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle. This rotator uses the latest TLE data to predict satellite visibility in a specific location on the Earth. For satellite visibility prediction is used python beyond library (https://pypi.org/project/beyond/). Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
+The device is supplied by 45 W laptop charger providing 20 V voltage. This voltage is used to supply stepper motors, but it's also reduced into 5 V using step-down voltage regulator to supply control unit and polarization switchers. The control unit of the rotator is computer [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) with its digital GPIO pins. Raspberry Pi controls two stepper motor drivers TB6600 and two polarization switchers described in chapter 3. The device is designed to require as few cables as possible so the communication between the rotator and station computer runs through WiFi.
 
-```
-ISS (ZARYA)             
-1 25544U 98067A   23216.30597424  .00016406  00000+0  29387-3 0  9996
-2 25544  51.6415  90.1197 0000976 153.7733 359.7746 15.50094272409258
-
-PLANETUM1               
-1 52738U 22057G   24218.26634944  .00072435  00000+0  14435-2 0  9995
-2 52738  97.5700 346.3663 0004271 318.8227  41.2700 15.46625200122146
-```
-
-If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
-
-For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
-
-The whole rotator is controlled by computer [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motor drivers, two rotary encoders and a magnetometer.
-
-The rotator has to follow satellite's azimuth and elevation, so we need two stepper motors and two drivers. Here is a list of electronic components:
+Here is a list of electronic components:
 
 | Name  | Quantity | Link |
 | :--- | :---: | :---: |
@@ -72,3 +56,21 @@ Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. I
 ## Polarization switchers
 
 ## Receiver and station computer
+
+Each satellite has data about its position in the Earth orbit called TLE (Two-Line Element). They are updated every 2 hours from URL: https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle. This rotator uses the latest TLE data to predict satellite visibility in a specific location on the Earth. For satellite visibility prediction is used python beyond library (https://pypi.org/project/beyond/). Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
+
+```
+ISS (ZARYA)             
+1 25544U 98067A   23216.30597424  .00016406  00000+0  29387-3 0  9996
+2 25544  51.6415  90.1197 0000976 153.7733 359.7746 15.50094272409258
+
+PLANETUM1               
+1 52738U 22057G   24218.26634944  .00072435  00000+0  14435-2 0  9995
+2 52738  97.5700 346.3663 0004271 318.8227  41.2700 15.46625200122146
+```
+
+If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
+
+For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
+
+
