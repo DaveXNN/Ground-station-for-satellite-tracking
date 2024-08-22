@@ -1,7 +1,7 @@
-# Antenna rotator for satellite tracking
-This repository contains Antenna rotator for satellite tracking project description. The goal of this project was to design a homemade antenna rotator for tracking any of the satellites in the Earth orbit. The rotator is controlled from a laptop via WiFi. The rotator controll unit is Raspberry Pi 4 with installed Mosquitto broker for subscribing data about satellites from the laptop. Raspberry Pi then controls stepper motors to turn two Yagi antennas into the right direction to the passing satellite. The source code on laptop and on Raspberry Pi is writen in Python 3.9.
+# Ground station for satellite tracking
+This repository contains description of the project Ground station for satellite tracking. The goal of this project was to build a ground satellite station that is able to receive signals from satellites operating at VHF (Very High Frequency) and UHF (Ultra High Frequency). The ground station constists of rotator, antennas, polarization switcher, receiver and station computer (laptop). Each part is describet in separate chapter.
 
-## Introduction
+## Rotator
 
 Each satellite has data about its position in the Earth orbit called TLE (Two-Line Element). They are updated every 2 hours from URL: https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle. This rotator uses the latest TLE data to predict satellite visibility in a specific location on the Earth. For satellite visibility prediction is used python beyond library (https://pypi.org/project/beyond/). Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
 
@@ -18,8 +18,6 @@ PLANETUM1
 If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
 
 For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
-
-## Hardware
 
 The whole rotator is controlled by computer [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) via digital GPIO pins. Raspberry Pi is connected with two stepper motor drivers, two rotary encoders and a magnetometer.
 
@@ -64,8 +62,8 @@ Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. I
 
 ### Stepper motor NEMA23
 
-## Software
+## Antennas
 
-### GUI - station computer
+## Polarization switchers
 
-### Raspberry Pi - rotator control
+## Receiver and station computer
