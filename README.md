@@ -33,12 +33,12 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 | Name | Pin number | GPIO code | Connected device | Description |
 | :--- | :---: | :---: | :---: | :--- |
 | VCC | 17 | 3V3 | Azimuth/elevation stepper motor driver | provides 3.3 V for controling drivers |
-| az.ENABLE | 19 | GPIO10 | Azimuth stepper motor driver | enables stepper motor to move |
+| az.ENA | 19 | GPIO10 | Azimuth stepper motor driver | enables stepper motor to move |
 | az.DIR | 21 | GPIO9 | Azimuth stepper motor driver | sets rotation direction |
-| az.STEP | 23 | GPIO11 | Azimuth stepper motor driver | used to do 1 single step |
-| el.ENABLE | 11 | GPIO17 | Elevation stepper motor driver | enables stepper motor to move |
+| az.PUL | 23 | GPIO11 | Azimuth stepper motor driver | used to do 1 single step |
+| el.ENA | 11 | GPIO17 | Elevation stepper motor driver | enables stepper motor to move |
 | el.DIR | 13 | GPIO27 | Elevation stepper motor driver | sets rotation direction |
-| el.STEP | 15 | GPIO22 | Elevation stepper motor driver |  enables stepper motor to move |
+| el.PUL | 15 | GPIO22 | Elevation stepper motor driver |  enables stepper motor to move |
 | pol_sw.UHF_REL1 | 27 | GPIO0 | UHF polarization switcher | controls relay 1 |
 | pol_sw.UHF_REL2 | 29 | GPIO5 | UHF polarization switcher | controls relay 2 |
 | pol_sw.VHF_REL1 | 31 | GPIO6 | VHF polarization switcher | controls relay 1 |
@@ -46,14 +46,22 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 
 ### Driver TB6600
 
-Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENABLE, DIRECTION and STEP and four outputs. Here is a list of all inputs and outputs of one stepper motor driver:
+Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENA (enable), DIR (direction) and PUL (pulse) and four outputs. Here is a list of all inputs and outputs of one stepper motor driver:
 
 | Name | I/O | Connected device| Cable color |
 | :--- | :---: | :---: | :---: |
-| A+ | red |
-| A- | blue |
-| B+ | green |
-| B- | black |
+| ENA- | input | Raspberry Pi | green |
+| ENA+ | input | Raspberry Pi | red |
+| DIR- | input | Raspberry Pi | yellow |
+| DIR+ | input | Raspberry Pi | red |
+| PUL- | input | Raspberry Pi | orange |
+| PUL+ | input | Raspberry Pi | red |
+| B- | output | stepper motor | black |
+| B+ | output | stepper motor | green |
+| A- | output | stepper motor | blue |
+| A+ | output | stepper motor | red |
+| GND | input | Laptop charger | black |
+| VCC | input | Laptop charger | white |
 
 ### Stepper motor NEMA23
 
