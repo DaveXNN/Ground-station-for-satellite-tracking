@@ -16,6 +16,7 @@ class AzimuthStepper:
         self.rem = 0				# remaining angle
         self.i = 0				# time increment
         self.i2 = 0				# increment of the first step
+        self.offset = 0                         # offset
         self.finished = True			# status: False -> moving, True -> finished moving
         self.ENABLE = 10			# number of ENABLE pin
         self.DIR = 9				# number of DIR pin
@@ -138,5 +139,31 @@ class AzimuthStepper:
         else:
             self.finished = True
 
+    def set_offset(self, offset):               # set AZ offset
+        self.wait_until_finished()
+        self.rem = self.rem + offset - self.offset
+        self.offset = offset
+        if self.rem >= self.a1:
+            self.set_positive_direction()
+            Timer(self.dbs, self.step_forward3).start()
+        elif self.rem <= -self.a1:
+            self.set_negative_direction()
+            Timer(self.dbs, self.step_backward3).start()
+        else:
+            self.finished = True
 
-azimuth_stepper = AzimuthStepper()
+    def step_forward3(self):			# 1 step in positive direction (usage: set_offset())
+        self.step()
+        self.rem -= self.a1
+        if self.rem >= self.a1:
+            Timer(self.dbs, self.step_forward3).start()
+        else:
+            self.finished = True
+
+    def step_backward3(self):			# 1 step in negative direction (usage: set_offset())
+        self.step()
+        self.rem += self.a1
+        if self.rem <= -self.a1:
+            Timer(self.dbs, self.step_backward3).start()
+        else:
+            self.finished = True
