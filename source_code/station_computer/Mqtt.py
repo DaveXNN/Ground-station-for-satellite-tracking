@@ -1,8 +1,8 @@
 import paho.mqtt.client as paho                                     # for subscribing data from MQTT broker
 
-from datetime import datetime, timezone
-from socket import gaierror
-from threading import Timer
+from datetime import datetime                                       # for operations with date and time
+from socket import gaierror                                         # for avoiding connection errors
+from threading import Timer                                         # for running more processes in parallel
 
 
 class Mqtt:
@@ -10,14 +10,14 @@ class Mqtt:
         self.client = paho.Client()                                 # create mqtt client
         self.client.username_pw_set('laptop', password='laptop')    # mqtt server authorization
         self.connected = False
-        self.az = '0.00'
-        self.el = '0.00'
+        self.az = '0.00'                                            # rotator azimuth
+        self.el = '0.00'                                            # rotator elevation
         self.enabled = True
         self.try_connect()
 
     @staticmethod
     def print_info(msg):
-        print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {msg}')
+        print(f'{datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}, {msg}')
 
     def try_connect(self):
         try:
@@ -58,8 +58,14 @@ class Mqtt:
     def publish_start_azimuth(self, start_azimuth):
         self.client.publish('start_azimuth', str(start_azimuth), 0)
 
-    def publish_action(self, action):
-        self.client.publish('action', action, 0)
+    def publish_az_offset(self, offset):
+        self.client.publish('az_offset', str(offset), 0)
+
+    def publish_el_offset(self, offset):
+        self.client.publish('el_offset', str(offset), 0)
 
     def publish_polarization(self, pol):
         self.client.publish('polarization', pol, 0)
+
+    def publish_action(self, action):
+        self.client.publish('action', action, 0)
