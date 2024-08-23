@@ -32,17 +32,16 @@ In the next table you can see numbers of connected pins and their usage:
 
 | Name | Pin number | GPIO code | Connected device | Description |
 | :---: | :---: | :---: | :---: | :--- |
-| VCC | 17 | 3V3 | Drivers | :--- |
-| az.ENABLE | 19 | GPIO10 | Azimuth stepper motor driver | :--- |
-| az.DIR | 21 | GPIO9 | Azimuth stepper motor driver | :--- |
-| az.STEP | 23 | GPIO11 | Azimuth stepper motor driver | :--- |
-| el.ENABLE | 11 | GPIO17 | Elevation stepper motor driver | :--- |
-| el.DIR | 13 | GPIO27 | Elevation stepper motor driver | :--- |
-| el.STEP | 15 | GPIO22 | Elevation stepper motor driver | :--- |
-| pol_sw.UHF_REL1 | 27 | GPIO0 |  |  |
-| pol_sw.UHF_REL2 | 29 | GPIO5 |  |  |
-| pol_sw.VHF_REL1 | 31 | GPIO6 |  |  |
-| pol_sw.VHF_REL2 | 33 | GPIO13 |  |  |
+| az.ENABLE | 19 | GPIO10 | Azimuth stepper motor driver | enables stepper motor to move |
+| az.DIR | 21 | GPIO9 | Azimuth stepper motor driver | sets rotation direction |
+| az.STEP | 23 | GPIO11 | Azimuth stepper motor driver | used to do 1 single step |
+| el.ENABLE | 11 | GPIO17 | Elevation stepper motor driver | enables stepper motor to move |
+| el.DIR | 13 | GPIO27 | Elevation stepper motor driver | sets rotation direction |
+| el.STEP | 15 | GPIO22 | Elevation stepper motor driver |  enables stepper motor to move |
+| pol_sw.UHF_REL1 | 27 | GPIO0 | UHF polarization switcher | controls relay 1 |
+| pol_sw.UHF_REL2 | 29 | GPIO5 | UHF polarization switcher | controls relay 2 |
+| pol_sw.VHF_REL1 | 31 | GPIO6 | VHF polarization switcher | controls relay 1 |
+| pol_sw.VHF_REL2 | 33 | GPIO13 | VHF polarization switcher | controls relay 2 |
 
 ### Driver TB6600
 
