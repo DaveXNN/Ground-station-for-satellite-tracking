@@ -40,7 +40,7 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 | az.PUL | 23 | GPIO11 | Azimuth stepper motor driver | used to do 1 single step |
 | el.ENA | 11 | GPIO17 | Elevation stepper motor driver | enables stepper motor to move |
 | el.DIR | 13 | GPIO27 | Elevation stepper motor driver | sets rotation direction |
-| el.PUL | 15 | GPIO22 | Elevation stepper motor driver |  enables stepper motor to move |
+| el.PUL | 15 | GPIO22 | Elevation stepper motor driver |  used to do 1 single step |
 | pol_sw.UHF_REL1 | 27 | GPIO0 | UHF polarization switcher | controls relay 1 |
 | pol_sw.UHF_REL2 | 29 | GPIO5 | UHF polarization switcher | controls relay 2 |
 | pol_sw.VHF_REL1 | 31 | GPIO6 | VHF polarization switcher | controls relay 1 |
@@ -67,9 +67,13 @@ Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. I
 
 Each of the drivers also has six switches to set up peak current and microstep. Peak current is set to 0,7 V and microstep to level 4, it means that the position of the switches is: S1-ON, S2-OFF, S3-OFF, S4-ON, S5-ON, S6-ON.
 
-### Stepper motor NEMA23
+#### Stepper motor NEMA23 (2x)
+
+NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8°.
 
 ## Antennas
+
+The rotator has two arms equiped with Yagi antennas for VHF and UHF.
 
 ## Polarization switchers
 
