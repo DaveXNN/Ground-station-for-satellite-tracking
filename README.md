@@ -49,7 +49,7 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENA (enable), DIR (direction) and PUL (pulse) and four outputs. Here is a list of all inputs and outputs of one stepper motor driver:
 
 | Name | I/O | Connected device| Cable color | Voltage |
-| :--- | :---: | :---: | :---: |
+| :--- | :---: | :---: | :---: | :---: |
 | ENA- | input | Raspberry Pi | green | 0/3.3 V |
 | ENA+ | input | Raspberry Pi | red | 3.3 V |
 | DIR- | input | Raspberry Pi | yellow | 0/3.3 V |
