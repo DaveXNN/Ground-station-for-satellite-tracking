@@ -15,6 +15,7 @@ class ElevationStepper:
         self.rem = 0				# remaining angle
         self.i = 0				# time increment
         self.i2 = 0				# tiem increment of the first step
+        self.offset = 0                         # offset
         self.finished = True			# status False -> moving, True -> moving finished
         self.ENABLE = 17			# number of ENABLE pin
         self.DIR = 27				# number of DIR pin
@@ -115,5 +116,31 @@ class ElevationStepper:
         else:
             self.finished = True
 
- 
-elevation_stepper = ElevationStepper()
+    def set_offset(self, offset):               # set EL offset
+        self.wait_until_finished()
+        self.rem = self.rem + offset - self.offset
+        self.offset = offset
+        if self.rem >= self.a1:
+            self.set_positive_direction()
+            Timer(self.dbs, self.step_forward3).start()
+        elif self.rem <= -self.a1:
+            self.set_negative_direction()
+            Timer(self.dbs, self.step_backward3).start()
+        else:
+            self.finished = True
+
+    def step_forward3(self):			# 1 step in positive direction (usage: set_offset())
+        self.step()
+        self.rem -= self.a1
+        if self.rem >= self.a1:
+            Timer(self.dbs, self.step_forward3).start()
+        else:
+            self.finished = True
+
+    def step_backward3(self):			# 1 step in negative direction (usage: set_offset())
+        self.step()
+        self.rem += self.a1
+        if self.rem <= -self.a1:
+            Timer(self.dbs, self.step_backward3).start()
+        else:
+            self.finished = True
