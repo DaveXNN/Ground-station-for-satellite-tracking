@@ -54,9 +54,9 @@ def on_message(client, userdata, message):
         el_st.set_speed(delta_t, float(msg))
     if topic == 'polarization':
         pol_sw.set(msg)
-    if topic == 'az_offset':
+    if topic == 'az_offset' and not tracking:
         az_st.set_offset(float(msg))
-    if topic == 'el_offset':
+    if topic == 'el_offset' and not tracking:
         el_st.set_offset(float(msg))
 
 
