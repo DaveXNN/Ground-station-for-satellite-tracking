@@ -5,10 +5,16 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-from AzimuthStepper import azimuth_stepper as az_st
-from ElevationStepper import elevation_stepper as el_st
-from PolarizationSwitcher import polarization_switcher as pol_sw
-from Publisher import publisher as pub
+from AzimuthStepper import AzimuthStepper
+from ElevationStepper import ElevationStepper
+from PolarizationSwitcher import PolarizationSwitcher
+from Publisher import Publisher
+
+
+az_st = AzimuthStepper()
+el_st = ElevationStepper()
+pol_sw = PolarizationSwitcher()
+pub = Publisher(az_st, el_st)
 
 
 delta_t = 0
@@ -48,17 +54,23 @@ def on_message(client, userdata, message):
         el_st.set_speed(delta_t, float(msg))
     if topic == 'polarization':
         pol_sw.set(msg)
+    if topic == 'az_offset':
+        az_st.set_offset(float(msg))
+    if topic == 'el_offset':
+        el_st.set_offset(float(msg))
 
 
 client = paho.Client()
-client.username_pw_set(<username>, password=<password>)
+client.username_pw_set('rotator', password='rotator')
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect(<hostname>, port=<port>)
+client.connect('raspberrypi', port=1883)
 client.subscribe('action')
 client.subscribe('start_azimuth')
 client.subscribe('delta_time')
 client.subscribe('delta_azimuth')
 client.subscribe('delta_elevation')
 client.subscribe('polarization')
+client.subscribe('az_offset')
+client.subscribe('el_offset')
 client.loop_forever()
