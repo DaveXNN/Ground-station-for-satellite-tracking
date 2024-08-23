@@ -4,9 +4,13 @@ This repository contains a description of the project Ground station for satelli
 ## Rotator
 Unfortunately, a lot of these satellites are situated on the LEO (Low Earth Orbit), in other words below the altitude of 2 000 km. It means that the satellite changes its position very quickly and it's very uncomfortable to change antennas' direction manually, because it may cause a loss of the satellite signal. A rotator is a good solution of this problem, because this device moves the antennas automatically with very high precision.
 
+### Design
+
 Of course there are many proffesional rotators available to buy in the internet e.g. Yaesu, but i decided to build a similar rotator by myself, because it's cheaper option and I really wanted to get into this field of problems. I've got an inspiration from **SatNOGS Rotator v3** (https://wiki.satnogs.org/SatNOGS_Rotator_v3).
 
 The rotator frame is made from aluminium and wood and has dimensions of 240x240x305 mm. There are also 4 bearings installed, 2 to hold azimuth rod and 2 to hold elevation rod. It's also designed to mantle and dismantle easily, so each of the rods can be installed or removed quickly. Spur gears are used to make the rods to move. They are available with all 3D-printed parts in this repository (https://github.com/DaveXNN/Ground-station-for-satellite-tracking/tree/main/stl-files/rotator).
+
+### Electronic components
 
 The device is supplied by 45 W laptop charger providing 20 V voltage. This voltage is used to supply stepper motors, but it's also reduced into 5 V using step-down voltage regulator to supply control unit and polarization switchers. The control unit of the rotator is computer [Raspberry Pi 4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) with its digital GPIO pins. Raspberry Pi controls two stepper motor drivers TB6600 and two polarization switchers described in chapter 3. The device is designed to require as few cables as possible so the communication between the rotator and station computer runs through WiFi.
 
@@ -18,26 +22,27 @@ Here is a list of electronic components:
 | Step-Down Voltage Regulator LM2596 | 1 | https://www.laskakit.cz/step-down-menic-s-lm2596/ |
 | Stepper motor NEMA23  | 2 | https://www.laskakit.cz/krokovy-motor-nema-23-57hs5630a4d8-1-1nm/ |
 | Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
-| Laptop charger  | 1  |  |
-
-### Raspberry Pi 4
+| Laptop charger 45 W | 1  |  |
 
 The next picture depicts Raspberry Pi 4B pinout:
 
-![Raspberry Pi 4 pinout](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
+![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
 
 In the next table you can see numbers of connected pins and their usage:
 
 | Name | Pin number | GPIO code | Connected device | Description |
 | :---: | :---: | :---: | :---: | :--- |
 | VCC | 17 | 3V3 | Drivers | :--- |
-| AZ.DRIV.-ENABLE | 19 | GPIO10 | Azimuth driver | :--- |
-| AZ.DRIV.-DIR | 21 | GPIO9 | Azimuth driver | :--- |
-| AZ.DRIV.-STEP | 23 | GPIO11 | Azimuth driver | :--- |
-| EL.DRIV.-ENABLE | 11 | GPIO17 | Elevation driver | :--- |
-| EL.DRIV.-DIR | 13 | GPIO27 | Elevation driver | :--- |
-| EL.DRIV.-STEP | 15 | GPIO22 | Elevation driver | :--- |
-| VCC | 1 | 3V3 | Magnetometer | 3.3 V power supply for magnetometer |
+| az.ENABLE | 19 | GPIO10 | Azimuth stepper motor driver | :--- |
+| az.DIR | 21 | GPIO9 | Azimuth stepper motor driver | :--- |
+| az.STEP | 23 | GPIO11 | Azimuth stepper motor driver | :--- |
+| el.ENABLE | 11 | GPIO17 | Elevation stepper motor driver | :--- |
+| el.DIR | 13 | GPIO27 | Elevation stepper motor driver | :--- |
+| el.STEP | 15 | GPIO22 | Elevation stepper motor driver | :--- |
+| pol_sw.UHF_REL1 | 27 | GPIO0 |  |  |
+| pol_sw.UHF_REL2 | 29 | GPIO5 |  |  |
+| pol_sw.VHF_REL1 | 31 | GPIO6 |  |  |
+| pol_sw.VHF_REL2 | 33 | GPIO13 |  |  |
 
 ### Driver TB6600
 
