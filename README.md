@@ -48,20 +48,20 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 
 Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENA (enable), DIR (direction) and PUL (pulse) and four outputs. Here is a list of all inputs and outputs of one stepper motor driver:
 
-| Name | I/O | Connected device| Cable color |
+| Name | I/O | Connected device| Cable color | Voltage |
 | :--- | :---: | :---: | :---: |
-| ENA- | input | Raspberry Pi | green |
-| ENA+ | input | Raspberry Pi | red |
-| DIR- | input | Raspberry Pi | yellow |
-| DIR+ | input | Raspberry Pi | red |
-| PUL- | input | Raspberry Pi | orange |
-| PUL+ | input | Raspberry Pi | red |
-| B- | output | stepper motor | black |
-| B+ | output | stepper motor | green |
-| A- | output | stepper motor | blue |
-| A+ | output | stepper motor | red |
-| GND | input | Laptop charger | black |
-| VCC | input | Laptop charger | white |
+| ENA- | input | Raspberry Pi | green | 0/3.3 V |
+| ENA+ | input | Raspberry Pi | red | 3.3 V |
+| DIR- | input | Raspberry Pi | yellow | 0/3.3 V |
+| DIR+ | input | Raspberry Pi | red | 3.3 V |
+| PUL- | input | Raspberry Pi | orange | 0/3.3 V |
+| PUL+ | input | Raspberry Pi | red | 3.3 V |
+| B- | output | stepper motor | black | 0-20 V |
+| B+ | output | stepper motor | green | 0-20 V |
+| A- | output | stepper motor | blue | 0-20 V |
+| A+ | output | stepper motor | red | 0-20 V |
+| GND | input | Laptop charger | black | 0 V |
+| VCC | input | Laptop charger | white | 20 V |
 
 ### Stepper motor NEMA23
 
