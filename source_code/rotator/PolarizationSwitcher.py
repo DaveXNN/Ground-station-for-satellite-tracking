@@ -37,6 +37,3 @@ class PolarizationSwitcher:
             GPIO.output(self.UHF_REL2, GPIO.HIGH)
             GPIO.output(self.VHF_REL1, GPIO.HIGH)
             GPIO.output(self.VHF_REL2, GPIO.HIGH)
-
-
-polarization_switcher = PolarizationSwitcher()
