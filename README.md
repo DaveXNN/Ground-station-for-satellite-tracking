@@ -28,10 +28,11 @@ The next picture depicts Raspberry Pi 4B pinout:
 
 ![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
 
-In the next table you can see numbers of connected pins and their usage:
+In the next table you can see Raspberry Pi digital pins and their usage:
 
 | Name | Pin number | GPIO code | Connected device | Description |
-| :---: | :---: | :---: | :---: | :--- |
+| :--- | :---: | :---: | :---: | :--- |
+| VCC | 17 | 3V3 | Azimuth/elevation stepper motor driver | provides 3.3 V for controling drivers |
 | az.ENABLE | 19 | GPIO10 | Azimuth stepper motor driver | enables stepper motor to move |
 | az.DIR | 21 | GPIO9 | Azimuth stepper motor driver | sets rotation direction |
 | az.STEP | 23 | GPIO11 | Azimuth stepper motor driver | used to do 1 single step |
@@ -45,10 +46,10 @@ In the next table you can see numbers of connected pins and their usage:
 
 ### Driver TB6600
 
-Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENABLE, DIRECTION and STEP and four outputs. Here is a list of outputs' names and colors of connected cables from stepper motor:
+Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs - ENABLE, DIRECTION and STEP and four outputs. Here is a list of all inputs and outputs of one stepper motor driver:
 
-| Name | Color |
-| :---: | :---: |
+| Name | I/O | Connected device| Cable color |
+| :--- | :---: | :---: | :---: |
 | A+ | red |
 | A- | blue |
 | B+ | green |
