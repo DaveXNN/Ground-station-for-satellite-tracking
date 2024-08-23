@@ -24,6 +24,8 @@ Here is a list of electronic components:
 | Driver TB6600  | 2 | https://www.laskakit.cz/driver-tb6600--tb67s109aftg--pro-krokove-motory-3a-47v/ |
 | Laptop charger 45 W | 1  |  |
 
+#### Raspberry Pi 4B
+
 The next picture depicts Raspberry Pi 4B pinout:
 
 ![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
@@ -31,7 +33,7 @@ The next picture depicts Raspberry Pi 4B pinout:
 In the next table you can see Raspberry Pi digital pins and their usage:
 
 | Name | Pin number | GPIO code | Connected device | Description |
-| :--- | :---: | :---: | :---: | :--- |
+| :--- | :---: | :---: | :---: | :---: |
 | VCC | 17 | 3V3 | Azimuth/elevation stepper motor driver | provides 3.3 V for controling drivers |
 | az.ENA | 19 | GPIO10 | Azimuth stepper motor driver | enables stepper motor to move |
 | az.DIR | 21 | GPIO9 | Azimuth stepper motor driver | sets rotation direction |
@@ -44,7 +46,7 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 | pol_sw.VHF_REL1 | 31 | GPIO6 | VHF polarization switcher | controls relay 1 |
 | pol_sw.VHF_REL2 | 33 | GPIO13 | VHF polarization switcher | controls relay 2 |
 
-### Driver TB6600
+#### Driver TB6600 (2x)
 
 Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs for controling stepper motor - ENA (enable), DIR (direction) and PUL (pulse) and for outputs A+, A-, B+, B-. Here is a list of all inputs and outputs of one stepper motor driver:
 
@@ -62,6 +64,8 @@ Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. I
 | A+ | output | stepper motor | red | 0-20 V |
 | GND | input | Laptop charger | black | 0 V |
 | VCC | input | Laptop charger | white | 20 V |
+
+Each of the drivers also has six switches to set up peak current and microstep. Peak current is set to 0,7 V and microstep to level 4, it means that the position of the switches is: S1-ON, S2-OFF, S3-OFF, S4-ON, S5-ON, S6-ON.
 
 ### Stepper motor NEMA23
 
