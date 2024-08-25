@@ -79,6 +79,32 @@ Rotator receives commands via MQTT client and then moves stepper motors or chang
 
 Python packages used in this part are [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) for controling digital pins, [paho-mqtt](https://pypi.org/project/paho-mqtt/) for communicating with MQTT broker and [threading](https://docs.python.org/3/library/threading.html) for running functions in parallel.
 
+For running script on boot, I modified file ```/etc/rc.local``` by adding a line python3 ```python3 /home/rotator/Rotator.py```, so the final file looks like this:
+```
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+# Print the IP address
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  printf "My IP address is %s\n" "$_IP"
+fi
+
+python3 /home/rotator/Rotator.py &
+
+exit 0
+```
+
 ## Yagi antennas
 
 The rotator has two arms equiped with Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz.
