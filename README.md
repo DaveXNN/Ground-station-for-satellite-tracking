@@ -75,7 +75,7 @@ NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8
 
 Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator).
 
-[Rotator.py](/source_code/rotator/Rotator.py) is a main script that is run on boot. It initializes all modules and subscribes topics used to control rotator. There are also modules [AzimuthStepper.py](/source_code/rotator/AzimuthStepper.py) and [ElevationStepper.py](/source_code/rotator/ElevationStepper.py) to control stepper motors, module [PolarizationSwitcher.py](/source_code/rotator/PolarizationSwitcher.py) to control polarazation switchers and module [Publisher.py](/source_code/rotator/Publisher.py) to send rotator current azimuth and elevation back to station computer.
+[Rotator.py](/source_code/rotator/Rotator.py) is a main script that is run on boot. It initializes all modules and subscribes topics used to control rotator. There is also module [Stepper.py](/source_code/rotator/Stepper.py) to control stepper motors, module [PolarizationSwitcher.py](/source_code/rotator/PolarizationSwitcher.py) to control polarazation switchers and module [Publisher.py](/source_code/rotator/Publisher.py) to send rotator current azimuth and elevation back to station computer.
 
 Python packages used in this part are [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) for controling digital pins, [paho-mqtt](https://pypi.org/project/paho-mqtt/) for communicating with MQTT broker and [threading](https://docs.python.org/3/library/threading.html) for running functions in parallel.
 
