@@ -1,3 +1,13 @@
+###########################################################################################################################
+#                                                                                                                         #
+#    Author:         D. Nenicka                                                                                           #
+#    Created:        3. 11. 2023                                                                                          #
+#    Modified:       25. 8. 2024                                                                                          #
+#    Description:    The main script, initializes all modules and subscribes topics from station computer via MQTT        #
+#                                                                                                                         #
+###########################################################################################################################
+
+
 import os
 import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
@@ -10,7 +20,7 @@ from Publisher import Publisher
 from Stepper import Stepper
 
 
-az_st = Stepper(10, 9, 11, 1.8, 4, 12.22222222, azimuth_mode=True)
+az_st = Stepper(10, 9, 11, 1.8, 4, 11, azimuth_mode=True)
 el_st = Stepper(17, 27, 22, 1.8, 4, 11)
 pol_sw = PolarizationSwitcher()
 pub = Publisher(az_st, el_st) 
