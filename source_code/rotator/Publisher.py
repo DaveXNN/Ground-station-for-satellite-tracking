@@ -1,3 +1,12 @@
+###########################################################################################################################
+#                                                                                                                         #
+#    Author:         D. Nenicka                                                                                           #
+#    Created:        3. 11. 2023                                                                                          #
+#    Description:    Module for publishing current rotator azimuth and elevation to be subscribed by station computer     #
+#                                                                                                                         #
+###########################################################################################################################
+
+
 import paho.mqtt.client as paho                                     # for publishing data from MQTT broker
 
 from threading import Timer
