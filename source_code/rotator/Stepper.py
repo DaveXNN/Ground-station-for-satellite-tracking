@@ -50,7 +50,7 @@ class Stepper:
     def set_negative_direction(self):          # set negative direction
         GPIO.output(self.dir, GPIO.LOW)
 
-    def step(self):				# do 1 step
+    def step(self):                            # do 1 step
         GPIO.output(self.pul, GPIO.LOW)
         sleep(self.sd)
         GPIO.output(self.pul, GPIO.HIGH)
