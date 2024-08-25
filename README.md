@@ -77,7 +77,7 @@ Rotator receives commands via MQTT client and then moves stepper motors or chang
 
 [Rotator.py](/source_code/rotator/Rotator.py) is a main script that is run on boot. It initializes all modules and subscribes topics used to control rotator. There are also modules [AzimuthStepper.py](/source_code/rotator/AzimuthStepper.py) and [ElevationStepper.py](/source_code/rotator/ElevationStepper.py) to control stepper motors, module [PolarizationSwitcher.py](/source_code/rotator/PolarizationSwitcher.py) to control polarazation switchers and module [Publisher.py](/source_code/rotator/Publisher.py) to send rotator current azimuth and elevation back to station computer.
 
-
+Python packages used in this part are [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) for controling digital pins, [paho-mqtt](https://pypi.org/project/paho-mqtt/) for communicating with MQTT broker and [threading](https://docs.python.org/3/library/threading.html) for running functions in paralell.
 
 ## Yagi antennas
 
