@@ -8,17 +8,17 @@
 ###########################################################################################################################
 
 
-import paho.mqtt.client as paho                                     # for publishing data from MQTT broker
+import paho.mqtt.client as paho                                            # for publishing data from MQTT broker
 
 from threading import Timer
 
 
 class Publisher:
     def __init__(self, az, el):
-        self.client = paho.Client()                                 # create mqtt client
+        self.client = paho.Client()                                        # create mqtt client
         self.az = az
         self.el = el
-        self.client.username_pw_set(<username>, password=<password>)# mqtt server authorization
+        self.client.username_pw_set(<username>, password=<password>)       # mqtt server authorization
         if self.client.connect(<hostname>, port=<port>) == 0:
             print('Publisher connected to MQTT Broker', sep=', ')
         else:
@@ -30,4 +30,3 @@ class Publisher:
         self.client.publish('azimuth', str(self.az.direction), 0)
         self.client.publish('elevation', str(self.el.direction), 0)
         Timer(self.per, self.reg_pub).start()
-        
