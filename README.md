@@ -8,7 +8,7 @@ Unfortunately, a lot of these satellites are situated on the LEO (Low Earth Orbi
 
 Of course there are many proffesional rotators available to buy in the internet e.g. Yaesu, but i decided to build a similar rotator by myself, because it's cheaper option and I really wanted to get into this field of problems. I've got an inspiration from **SatNOGS Rotator v3** (https://wiki.satnogs.org/SatNOGS_Rotator_v3).
 
-The rotator frame is made from aluminium and wood and has dimensions of 240x240x305 mm. There are also 4 bearings installed, 2 to hold azimuth rod and 2 to hold elevation rod. It's also designed to mantle and dismantle easily, so each of the rods can be installed or removed quickly. Spur gears are used to make the rods to move. They are available with all 3D-printed parts in this repository (https://github.com/DaveXNN/Ground-station-for-satellite-tracking/tree/main/stl-files/rotator).
+The rotator frame is made from aluminium and wood and has dimensions of 240x240x305 mm. There are also 4 bearings installed, 2 to hold azimuth rod and 2 to hold elevation rod. It's also designed to mantle and dismantle easily, so each of the rods can be installed or removed quickly. Spur gears are used to make the rods to move. They are available with all 3D-printed parts in [this repository](/stl-files/rotator).
 
 ### Electronic components
 
@@ -73,7 +73,7 @@ NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8
 
 ### Software
 
-Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator)
+Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator).
 
 ## Yagi antennas
 
