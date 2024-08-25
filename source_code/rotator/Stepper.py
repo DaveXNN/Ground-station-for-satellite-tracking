@@ -16,13 +16,13 @@ from time import sleep
 
 class Stepper:
     def __init__(self, ena_gpio, dir_gpio, pul_gpio, e1, microstep, ratio, azimuth_mode=False):
-        self.ena = ena_gpio			        # number of ENA pin
-        self.dir = dir_gpio				    # number of DIR pin
-        self.pul = pul_gpio				    # number of PUL pin
-        GPIO.setup(self.ena, GPIO.OUT)	    # set ENA as output
-        GPIO.setup(self.dir, GPIO.OUT)		# set DIR as output
-        GPIO.setup(self.pul, GPIO.OUT)		# set PUL as output
-        self.a1 = e1 / (microstep * ratio)	# elementary angle (angle of 1 step)
+        self.ena = ena_gpio                    # number of ENA pin
+        self.dir = dir_gpio                    # number of DIR pin
+        self.pul = pul_gpio                    # number of PUL pin
+        GPIO.setup(self.ena, GPIO.OUT)         # set ENA as output
+        GPIO.setup(self.dir, GPIO.OUT)         # set DIR as output
+        GPIO.setup(self.pul, GPIO.OUT)         # set PUL as output
+        self.a1 = e1 / (microstep * ratio)     # elementary angle (angle of 1 step)
         self.direction = 0				    # direction
         self.position = 0				    # position
         self.remain = 0				        # remaining angle
