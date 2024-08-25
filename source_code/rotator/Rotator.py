@@ -24,8 +24,6 @@ az_st = Stepper(10, 9, 11, 1.8, 4, 11, azimuth_mode=True)
 el_st = Stepper(17, 27, 22, 1.8, 4, 11)
 pol_sw = PolarizationSwitcher()
 pub = Publisher(az_st, el_st) 
-
-
 delta_t = 0
 tracking = False
 
