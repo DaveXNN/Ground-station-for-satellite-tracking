@@ -28,7 +28,7 @@ Here is a list of electronic components:
 
 The next picture depicts Raspberry Pi 4B pinout:
 
-![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](https://github.com/DaveXNN/Antenna-rotator-for-satellite-tracking/blob/main/images/raspberrypi-pinout.png)
+![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/raspberrypi-pinout.png)
 
 In the next table you can see Raspberry Pi digital pins and their usage:
 
