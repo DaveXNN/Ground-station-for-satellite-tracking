@@ -23,18 +23,18 @@ class Stepper:
         GPIO.setup(self.dir, GPIO.OUT)         # set DIR as output
         GPIO.setup(self.pul, GPIO.OUT)         # set PUL as output
         self.a1 = e1 / (microstep * ratio)     # elementary angle (angle of 1 step)
-        self.direction = 0				    # direction
-        self.position = 0				    # position
-        self.remain = 0				        # remaining angle
-        self.offset = 0                     # offset
-        self.i = 0				            # time increment
-        self.i2 = 0				            # time increment of the first step
-        self.sd = 0.00001			        # duration of 1 step
-        self.dbs = 0.001			        # min. delay between 2 steps
-        self.finished = True			    # status: False -> moving, True -> finished moving
-        self.azimuth_mode = azimuth_mode    # mode
-        self.enable_motor()			        # enable stepper motor
-        self.set_positive_direction()		# set positive direction
+        self.direction = 0                     # direction
+        self.position = 0                      # position
+        self.remain = 0                        # remaining angle
+        self.offset = 0                        # offset
+        self.i = 0                             # time increment
+        self.i2 = 0                            # time increment of the first step
+        self.sd = 0.00001                      # duration of 1 step
+        self.dbs = 0.001                       # min. delay between 2 steps
+        self.finished = True                   # status: False -> moving, True -> finished moving
+        self.azimuth_mode = azimuth_mode       # mode
+        self.enable_motor()                    # enable stepper motor
+        self.set_positive_direction()          # set positive direction
 
     def enable_motor(self):			        # enable stepper motor
         GPIO.output(self.ena, GPIO.HIGH)
