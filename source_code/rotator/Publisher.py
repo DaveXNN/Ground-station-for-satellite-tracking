@@ -26,7 +26,7 @@ class Publisher:
         Timer(self.per, self.reg_pub).start()
 
     def reg_pub(self):
-        self.client.publish('azimuth', str(self.az.az), 0)
-        self.client.publish('elevation', str(self.el.el), 0)
+        self.client.publish('azimuth', str(self.az.direction), 0)
+        self.client.publish('elevation', str(self.el.direction), 0)
         Timer(self.per, self.reg_pub).start()
         
