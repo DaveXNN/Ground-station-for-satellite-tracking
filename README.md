@@ -75,6 +75,8 @@ NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8
 
 Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator).
 
+[Rotator.py](/source_code/rotator/Rotator.py) is a main script that is run on boot.
+
 ## Yagi antennas
 
 The rotator has two arms equiped with Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz.
