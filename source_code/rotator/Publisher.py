@@ -2,6 +2,7 @@
 #                                                                                                                         #
 #    Author:         D. Nenicka                                                                                           #
 #    Created:        3. 11. 2023                                                                                          #
+#    Modified:       25. 8. 2024                                                                                          #
 #    Description:    Module for publishing current rotator azimuth and elevation to be subscribed by station computer     #
 #                                                                                                                         #
 ###########################################################################################################################
