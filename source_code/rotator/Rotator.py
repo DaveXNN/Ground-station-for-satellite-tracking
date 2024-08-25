@@ -1,3 +1,13 @@
+###########################################################################################################################
+#                                                                                                                         #
+#    Author:         D. Nenicka                                                                                           #
+#    Created:        3. 11. 2023                                                                                          #
+#    Description:    The main script of rotator source code. Initializes all modules and subscribes MQTT topics.          #
+#                                                                                                                         #
+###########################################################################################################################
+# !/usr/bin/python3
+
+
 import os
 import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
