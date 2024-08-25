@@ -40,7 +40,7 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 | az.PUL | 23 | GPIO11 | Azimuth stepper motor driver | used to do 1 single step |
 | el.ENA | 11 | GPIO17 | Elevation stepper motor driver | enables stepper motor to move |
 | el.DIR | 13 | GPIO27 | Elevation stepper motor driver | sets rotation direction |
-| el.PUL | 15 | GPIO22 | Elevation stepper motor driver |  used to do 1 single step |
+| el.PUL | 15 | GPIO22 | Elevation stepper motor driver | used to do 1 single step |
 | pol_sw.UHF_REL1 | 27 | GPIO0 | UHF polarization switcher | controls relay 1 |
 | pol_sw.UHF_REL2 | 29 | GPIO5 | UHF polarization switcher | controls relay 2 |
 | pol_sw.VHF_REL1 | 31 | GPIO6 | VHF polarization switcher | controls relay 1 |
@@ -69,11 +69,11 @@ Each of the drivers also has six switches to set up peak current and microstep. 
 
 #### Stepper motor NEMA23 (2x)
 
-NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8°.
+NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8°. It's connected with 4 wires (black, green, blue, red) to the driver.
 
 ## Antennas
 
-The rotator has two arms equiped with Yagi antennas for VHF and UHF.
+The rotator has two arms equiped with Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz.
 
 ## Polarization switchers
 
