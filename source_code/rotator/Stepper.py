@@ -36,18 +36,18 @@ class Stepper:
         self.enable_motor()                    # enable stepper motor
         self.set_positive_direction()          # set positive direction
 
-    def enable_motor(self):			        # enable stepper motor
+    def enable_motor(self):                    # enable stepper motor
         GPIO.output(self.ena, GPIO.HIGH)
         GPIO.output(self.pul, GPIO.HIGH)
 
-    def disable_motor(self):			    # disable stepper motor
+    def disable_motor(self):                   # disable stepper motor
         GPIO.output(self.ena, GPIO.LOW)
         GPIO.output(self.pul, GPIO.HIGH)
 
-    def set_positive_direction(self):		# set positive direction
+    def set_positive_direction(self):          # set positive direction
         GPIO.output(self.dir, GPIO.HIGH)
 
-    def set_negative_direction(self):		# set negative direction
+    def set_negative_direction(self):          # set negative direction
         GPIO.output(self.dir, GPIO.LOW)
 
     def step(self):				# do 1 step
@@ -55,7 +55,7 @@ class Stepper:
         sleep(self.sd)
         GPIO.output(self.pul, GPIO.HIGH)
 
-    def increase(self):			            # increase direction and position by 1 elementary angle
+    def increase(self):                        # increase direction and position by 1 elementary angle
         self.direction += self.a1
         self.position += self.a1
         self.remain -= self.a1
@@ -63,7 +63,7 @@ class Stepper:
             if self.direction >= 360:
                 self.direction -= 360
 
-    def decrease(self):			            # decrease direction and position by 1 elementary angle
+    def decrease(self):                        # decrease direction and position by 1 elementary angle
         self.direction -= self.a1
         self.position -= self.a1
         self.remain += self.a1
@@ -71,12 +71,12 @@ class Stepper:
             if self.direction <= 0:
                 self.direction += 360
 
-    def wait_until_finished(self):		    # wait until another AZ process is finished
+    def wait_until_finished(self):             # wait until another AZ process is finished
         while not self.finished:
             pass
         self.finished = False
 
-    def set_speed(self, duration, angle):   # set speed (parameters: duration, angle)
+    def set_speed(self, duration, angle):      # set speed (parameters: duration, angle)
         self.wait_until_finished()
         self.remain += angle
         self.i = (self.a1 * duration) / abs(self.remain)
@@ -90,7 +90,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def step_forward(self):			        # 1 step in positive direction (usage: set_speed())
+    def step_forward(self):                    # 1 step in positive direction (usage: set_speed())
         self.step()
         self.increase()
         if self.remain >= self.a1:
@@ -98,7 +98,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def step_backward(self):			    # 1 step in negative direction (usage: set_speed())
+    def step_backward(self):                   # 1 step in negative direction (usage: set_speed())
         self.step()
         self.decrease()
         if self.remain <= -self.a1:
@@ -106,7 +106,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def move_to_direction(self, direction):	# move to different direction (before tracking)
+    def move_to_direction(self, direction):    # move to different direction (before tracking)
         self.wait_until_finished()
         self.remain = self.remain + direction - self.direction
         if self.remain > 180:
@@ -122,7 +122,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def step_forward2(self):			    # 1 step in positive direction (usage: move_to_direction(), reset_position())
+    def step_forward2(self):                   # 1 step in positive direction (usage: move_to_direction(), reset_position())
         self.step()
         self.increase()
         if self.remain >= self.a1:
@@ -130,7 +130,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def step_backward2(self):			    # 1 step in negative direction (usage: move_to_direction(), reset_position())
+    def step_backward2(self):                  # 1 step in negative direction (usage: move_to_direction(), reset_position())
         self.step()
         self.decrease()
         if self.remain <= -self.a1:
@@ -138,7 +138,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def reset_position(self):			    # reset position to zero
+    def reset_position(self):                  # reset position to zero
         self.wait_until_finished()
         self.remain -= self.position
         if self.remain >= self.a1:
@@ -150,7 +150,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def set_offset(self, offset):           # set offset
+    def set_offset(self, offset):              # set offset
         self.wait_until_finished()
         self.remain = self.remain + offset - self.offset
         self.offset = offset
@@ -163,7 +163,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def step_forward3(self):			    # 1 step in positive direction (usage: set_offset())
+    def step_forward3(self):                   # 1 step in positive direction (usage: set_offset())
         self.step()
         self.remain -= self.a1
         if self.remain >= self.a1:
@@ -171,7 +171,7 @@ class Stepper:
         else:
             self.finished = True
 
-    def step_backward3(self):			    # 1 step in negative direction (usage: set_offset())
+    def step_backward3(self):                  # 1 step in negative direction (usage: set_offset())
         self.step()
         self.remain += self.a1
         if self.remain <= -self.a1:
