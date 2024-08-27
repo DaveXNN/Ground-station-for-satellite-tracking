@@ -131,4 +131,7 @@ If we have the latest TLE data, we can track each satellite in the Earth orbit. 
 
 For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
 
+![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/satellite_tracking_software-screenshot0.png)
+![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/satellite_tracking_software-screenshot1.png)
+
 
