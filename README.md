@@ -113,8 +113,20 @@ exit 0
 ```
 
 ## Yagi antennas
+The rotator has two arms equiped with cross-Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz. The antennas are made from aluminium. For boom is made from 20 mm square rod and the elements are made from 6 mm circle rod.
 
-The rotator has two arms equiped with cross-Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz. 
+### VHF Yagi antenna (145 MHz)
+The VHF Yagi antenna has 4 elements - reflector, radiator and 2 directors. All of the elements are described in the table below:
+
+| Element | Length (mm) | Boom position (mm) | Gain (dBd) |
+| :--- | :---: | :---: | :---: |
+| reflector | 1019.4 | 30 | - |
+| radiator | 983.7 | 444 | - |
+| director 1 | 946.1 | 598.6 | 4.8 |
+| director 2 | 937.9 | 970.7 | 6.5 |
+
+
+### UHF Yagi antenna (435 MHz)
 
 ## Polarization switchers
 
