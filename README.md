@@ -1,7 +1,7 @@
 # Ground station for satellite tracking
 This repository contains a description of the project Ground station for satellite tracking. The goal of this project was to build a ground satellite station that is able to receive signals from satellites operating at VHF (Very High Frequency) and UHF (Ultra High Frequency). The ground station constists of rotator, antennas, polarization switcher, receiver and station computer (laptop). Each part is describet in separate chapter.
 
-![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/rotator-outside.png)
+![](/images/rotator-outside.png)
 
 ## Rotator
 Unfortunately, a lot of these satellites are situated on the LEO (Low Earth Orbit), in other words below the altitude of 2 000 km. It means that the satellite changes its position very quickly and it's very uncomfortable to change antennas' direction manually, because it may cause a loss of the satellite signal. A rotator is a good solution of this problem, because this device moves the antennas automatically with very high precision.
@@ -69,9 +69,14 @@ Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. I
 
 Each of the drivers also has six switches to set up peak current and microstep. Peak current is set to 0,7 V and microstep to level 4, it means that the position of the switches is: S1-ON, S2-OFF, S3-OFF, S4-ON, S5-ON, S6-ON.
 
+![](/images/driver.jpg)
+
 #### Stepper motor NEMA23 (2x)
 
-NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8°. It's connected with 4 wires (black, green, blue, red) to the driver.
+NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8°. It's connected with 4 wires (black, green, blue, red) to the driver. Stepper motors move the rotator via spur gears. In the next picture you can see spur gears for azimuth and elevation control.
+
+![](/images/spurgear_azimuth.jpg)
+![](/images/spurgear_elevation.jpg)
 
 ### Software
 
@@ -109,7 +114,7 @@ exit 0
 
 ## Yagi antennas
 
-The rotator has two arms equiped with Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz.
+The rotator has two arms equiped with cross-Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz. 
 
 ## Polarization switchers
 
@@ -131,10 +136,13 @@ If we have the latest TLE data, we can track each satellite in the Earth orbit. 
 
 For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
 
-![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/satellite_tracking_software-screenshot0.png)
-![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/satellite_tracking_software-screenshot1.png)
+![](/images/satellite_tracking_software-screenshot0.png)
+![](/images/satellite_tracking_software-screenshot1.png)
 
 ## Experience with satellite tracking
 
+![](/images/sdr_sharp00.png)
+![](/images/sdr_sharp01.png)
+![](/images/sdr_angel00.png)
 
 
