@@ -138,9 +138,13 @@ The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. The f
 | director 7 | 296.8 | 1280.9 | 11.2 | 13.3 |
 
 ## Polarization switchers
-To change antenna polarization I built a polarization switcher. It is a device that is between antenna and receiver and can change the polarization between vertical, horizontal, right-handed circular polarization (RHCP) and left-handed circular polarization (LHCP).
+To change antenna polarization I built a polarization switcher. It is a device that is between antenna and receiver and can change the polarization between vertical, horizontal, right-handed circular polarization (RHCP) and left-handed circular polarization (LHCP). The device consists of two relays, that switch between two lenghts of coaxial cable, so they can shift the phase of comming signal from both antennas. VHF and UHF polarization switchers have different lenght of the cables because they are operating on different frequencies.
 
 ## Receiver and station computer
+Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
+
+![Airspy Mini](/images/airspy_mini.jpg)
+
 Each satellite has data about its position in the Earth orbit called TLE (Two-Line Element). They are updated every 2 hours from URL: https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle. This rotator uses the latest TLE data to predict satellite visibility in a specific location on the Earth. For satellite visibility prediction is used python beyond library (https://pypi.org/project/beyond/). Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
 
 ```
