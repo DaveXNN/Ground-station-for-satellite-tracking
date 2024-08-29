@@ -81,7 +81,7 @@ Rotator receives commands via MQTT client and then moves stepper motors or chang
 
 Python packages used in this part are [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) for controling digital pins, [paho-mqtt](https://pypi.org/project/paho-mqtt/) for communicating with MQTT broker and [threading](https://docs.python.org/3/library/threading.html) for running functions in parallel.
 
-For running script on boot, I modified file ```/etc/rc.local``` by adding a line ```python3 /home/rotator/Rotator.py```, so the final file looks like this:
+For running script on boot of Raspberry Pi, I modified file ```/etc/rc.local``` by adding a line ```python3 /home/rotator/Rotator.py```, so the final file looks like this:
 ```
 #!/bin/sh -e
 #
