@@ -110,10 +110,10 @@ exit 0
 ## Yagi antennas
 The rotator has two arms equiped with cross-Yagi antennas for VHF and UHF. The VHF Yagi antenna is designed for frequency 145 MHz and the UHF Yagi antenna is designed for 435 MHz. The antennas are made from aluminium. For boom is made from 20 mm square rod and the elements are made from 6 mm circle rod.
 
-The cross-Yagi antennas consist of two antennas on the same boom. The are rotated by 45 degrees and the shift between them is one fourth of the wavelangth ($\lambda/4$)
+The cross-Yagi antennas consist of two antennas on the same boom. The are rotated by 45 degrees and the shift between them is one fourth of the wavelangth ($\lambda/4$).
 
 ### VHF Yagi antenna (145 MHz)
-The VHF Yagi antenna has 4 elements - reflector, radiator and 2 directors. All of the elements are described in the table below:
+The VHF Yagi antenna has 4 elements - reflector, radiator and 2 directors. The frequency 145 MHz corresponds with the wavelenth 2068 mm. All of the elements are described in the table below:
 
 | Element | Length (mm) | Boom position (mm) | Gain (dBd) | Gain (dBi) |
 | :--- | :---: | :---: | :---: | :---: |
@@ -123,7 +123,7 @@ The VHF Yagi antenna has 4 elements - reflector, radiator and 2 directors. All o
 | director 2 | 937.9 | 970.7 | 6.5 | 8.6 |
 
 ### UHF Yagi antenna (435 MHz)
-The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. All of the elements are described in the table below:
+The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. The frequency 435 MHz corresponds with the wavelenth 689 mm. All of the elements are described in the table below:
 
 | Element | Length (mm) | Boom position (mm) | Gain (dBd) | Gain (dBi) |
 | :--- | :---: | :---: | :---: | :---: |
@@ -138,9 +138,9 @@ The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. All o
 | director 7 | 296.8 | 1280.9 | 11.2 | 13.3 |
 
 ## Polarization switchers
+To change antenna polarization I built a polarization switcher. It is a device that is between antenna and receiver and can change the polarization between vertical, horizontal, right-handed circular polarization (RHCP) and left-handed circular polarization (LHCP).
 
 ## Receiver and station computer
-
 Each satellite has data about its position in the Earth orbit called TLE (Two-Line Element). They are updated every 2 hours from URL: https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle. This rotator uses the latest TLE data to predict satellite visibility in a specific location on the Earth. For satellite visibility prediction is used python beyond library (https://pypi.org/project/beyond/). Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
 
 ```
