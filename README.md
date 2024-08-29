@@ -7,7 +7,6 @@ This repository contains a description of the project Ground station for satelli
 Unfortunately, a lot of these satellites are situated on the LEO (Low Earth Orbit), in other words below the altitude of 2 000 km. It means that the satellite changes its position very quickly and it's very uncomfortable to change antennas' direction manually, because it may cause a loss of the satellite signal. A rotator is a good solution of this problem, because this device moves the antennas automatically with very high precision.
 
 ### Design
-
 Of course there are many proffesional rotators available to buy in the internet e.g. Yaesu, but i decided to build a similar rotator by myself, because it's cheaper option and I really wanted to get into this field of problems. I've got an inspiration from **SatNOGS Rotator v3** (https://wiki.satnogs.org/SatNOGS_Rotator_v3).
 
 The rotator frame is made from aluminium and wood and has dimensions of 240x240x305 mm. There are also 4 bearings installed, 2 to hold azimuth rod and 2 to hold elevation rod. It's also designed to mantle and dismantle easily, so each of the rods can be installed or removed quickly. Spur gears are used to make the rods to move. They are available with all 3D-printed parts in [this repository](/stl-files/rotator).
@@ -27,7 +26,6 @@ Here is a list of electronic components:
 | Laptop charger 45 W | 1  |  |
 
 #### Raspberry Pi 4B
-
 The next picture depicts Raspberry Pi 4B pinout:
 
 ![Raspberry Pi 4 pinout (www.theengineeringprojects.com)](/images/raspberrypi-pinout.png)
@@ -49,7 +47,6 @@ In the next table you can see Raspberry Pi digital pins and their usage:
 | pol_sw.VHF_REL2 | 33 | GPIO13 | VHF polarization switcher | controls relay 2 |
 
 #### Driver TB6600 (2x)
-
 Driver TB6600 is supposed to control a stepper motor with a power supply 20 V. It has three inputs for controling stepper motor - ENA (enable), DIR (direction) and PUL (pulse) and for outputs A+, A-, B+, B-. Here is a list of all inputs and outputs of one stepper motor driver:
 
 | Name | I/O | Connected device| Cable color | Voltage |
@@ -72,14 +69,12 @@ Each of the drivers also has six switches to set up peak current and microstep. 
 ![](/images/driver.jpg)
 
 #### Stepper motor NEMA23 (2x)
-
 NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8°. It's connected with 4 wires (black, green, blue, red) to the driver. Stepper motors move the rotator via spur gears. In the next picture you can see spur gears for azimuth and elevation control.
 
 ![](/images/spurgear_azimuth.jpg)
 ![](/images/spurgear_elevation.jpg)
 
 ### Software
-
 Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator).
 
 [Rotator.py](/source_code/rotator/Rotator.py) is a main script that is run on boot. It initializes all modules and subscribes topics used to control rotator. There is also module [Stepper.py](/source_code/rotator/Stepper.py) to control stepper motors, module [PolarizationSwitcher.py](/source_code/rotator/PolarizationSwitcher.py) to control polarazation switchers and module [Publisher.py](/source_code/rotator/Publisher.py) to send rotator current azimuth and elevation back to station computer.
@@ -118,15 +113,27 @@ The rotator has two arms equiped with cross-Yagi antennas for VHF and UHF. The V
 ### VHF Yagi antenna (145 MHz)
 The VHF Yagi antenna has 4 elements - reflector, radiator and 2 directors. All of the elements are described in the table below:
 
-| Element | Length (mm) | Boom position (mm) | Gain (dBd) |
-| :--- | :---: | :---: | :---: |
-| reflector | 1019.4 | 30 | - |
-| radiator | 983.7 | 444 | - |
-| director 1 | 946.1 | 598.6 | 4.8 |
-| director 2 | 937.9 | 970.7 | 6.5 |
-
+| Element | Length (mm) | Boom position (mm) | Gain (dBd) | Gain (dBi) |
+| :--- | :---: | :---: | :---: | :---: |
+| reflector | 1019.4 | 30 | - | - |
+| radiator | 983.7 | 444 | - | - |
+| director 1 | 946.1 | 598.6 | 4.8 | 6.9 |
+| director 2 | 937.9 | 970.7 | 6.5 | 8.6 |
 
 ### UHF Yagi antenna (435 MHz)
+The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. All of the elements are described in the table below:
+
+| Element | Length (mm) | Boom position (mm) | Gain (dBd) | Gain (dBi) |
+| :--- | :---: | :---: | :---: | :---: |
+| reflector | 348.9 | 30 | - | - |
+| radiator | 323.8 | 168 | - | - |
+| director 1 | 313.5 | 219.5 | 4.8 | 6.9 |
+| director 2 | 310.2 | 343.6 | 6.5 | 8.6 |
+| director 3 | 307.1 | 491.7 | 7.8 | 9.9 |
+| director 4 | 304.2 | 664.0 | 8.9 | 11.0 |
+| director 5 | 301.6 | 857.0 | 9.8 | 11.9 |
+| director 6 | 299.1 | 1063.8 | 10.5 | 12.7 |
+| director 7 | 296.8 | 1280.9 | 11.2 | 13.3 |
 
 ## Polarization switchers
 
