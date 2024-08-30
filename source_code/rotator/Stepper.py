@@ -8,10 +8,10 @@
 ###########################################################################################################################
 
 
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO                        # module for GPIO control
 
-from threading import Timer
-from time import sleep
+from threading import Timer                    # module for running multiple tasks in the same time
+from time import sleep                         # module with sleep() function
 
 
 class Stepper:
