@@ -167,12 +167,19 @@ A text file tle_active.txt contains TLE of all active satellites on the Earth's 
 
 ![](/images/satellite_tracking_software-default.png)
 
-You can select any of the satellites in All satellites listbox and predict its visibility. Information about the pass will be shown below the listbox
+You can select any of the satellites in All satellites listbox and predict its visibility. Information about the pass will be shown below in the table. Here is an example predict for International Space Station (ISS):
 
 ![](/images/satellite_tracking_software-predicting.png)
 
-and consist of:
-* AOS (aquistition of the satellite)
+The pass prediction consists of:
+* Aquistition of the satellite (AOS) - time of the beginning of a pass
+* AOS azimuth
+* Maximum elevation (MAX) - time of the maximum elevation of a pass
+* MAX azimuth
+* MAX elevation
+* Loss of the satellite (LOS) - time of the end of a pass
+* LOS azimuth
+* Duration - duration of the pass
 
 Here is a list of used Python packages:
 * [beyond](https://pypi.org/project/beyond/) - predicting satellite visibility
