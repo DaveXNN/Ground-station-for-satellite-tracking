@@ -1,16 +1,27 @@
-import json                                                         # for working with json files
-import requests                                                     # for downloading TLE data
-import time
+###########################################################################################################################
+#                                                                                                                         #
+#    Author:         D. Nenicka                                                                                           #
+#    Created:        3. 11. 2023                                                                                          #
+#    Modified:       30. 8. 2024                                                                                          #
+#    Description:    Simple GUI for satellite tracking                                                                    #
+#                                                                                                                         #
+###########################################################################################################################
 
-from beyond.dates import Date                                       # for Date object from beyond library
-from beyond.io.tle import Tle                                       # for Tle object from beyond library
-from beyond.frames import create_station                            # for station object from beyond library
-from datetime import datetime, timedelta                            # for operations with date and time
-from numpy import degrees                                           # for radian-degree conversion
-from tkinter import *                                               # tkinter package for GUI
-from threading import Thread, Timer                                 # for running more processes in parallel
 
-from Mqtt import Mqtt                                               # for communication with MQTT server
+import json                                                         # module for working with json files
+import requests                                                     # module for downloading
+
+from beyond.dates import Date                                       # module with Date object from beyond library
+from beyond.io.tle import Tle                                       # module with Tle object from beyond library
+from beyond.frames import create_station                            # module with station object from beyond library
+from datetime import datetime, timedelta                            # module for operations with date and time
+from numpy import degrees                                           # module with radian-degree conversion
+from threading import Thread, Timer                                 # module for running more processes in parallel
+from tkinter import *                                               # tkinter package for creating GUI
+from time import sleep                                              # module with sleep() function
+
+
+from Mqtt import Mqtt                                               # module for communication with MQTT broker
 
 
 class TrackingTool(Tk):
@@ -526,12 +537,12 @@ class Offset:
         self.publish()
 
     def increase(self):
-        if mqtt.connected:
+        if mqtt.connected and not app.tracking:
             self.offset += self.offset_step
             self.publish()
 
     def decrease(self):
-        if mqtt.connected:
+        if mqtt.connected and not app.tracking:
             self.offset -= self.offset_step
             self.publish()
 
@@ -584,6 +595,7 @@ class TrackedSatellite:
                 self.start_time_seconds = (self.aos_time-datetime.utcnow()-self.delay_before_tracking).seconds
                 if self.max_el > app.min_max and self.elevs[0] < 0.1:
                     self.delay = 0
+                    app.find_first_pass()
                     self.tracking_thread = Timer(self.start_time_seconds, self.track)
                     self.tracking_thread.start()
                     self.print_info(f'created data, AOS: {self.aos_time}, MAX elevation: {self.max_el}')
@@ -599,12 +611,13 @@ class TrackedSatellite:
                 app.r_tracked_satellite.set(self.name)
                 app.ts_los_time = self.los_time
                 mqtt.publish_action('start')
+                app.find_first_pass()
                 app.predict(self.name)
-                time.sleep(0.1)
+                sleep(0.1)
                 wait_time = (self.aos_time - datetime.utcnow()).total_seconds()
                 self.print_info(f'will fly over your head in {int(wait_time)} seconds')
                 mqtt.publish_start_azimuth(self.aos_az)
-                time.sleep(wait_time)
+                sleep(wait_time)
                 self.print_info('tracking started')
                 for x in range(len(self.times) - 1):
                     delta_t = (self.times[x + 1] - self.times[x]).total_seconds()
@@ -615,7 +628,7 @@ class TrackedSatellite:
                     if delta_az < -180:
                         delta_az += 360
                     mqtt.publish_data(delta_t, delta_az, delta_el)
-                    time.sleep(delta_t)
+                    sleep(delta_t)
                 mqtt.publish_action('stop')
                 self.print_info('tracking ended')
                 app.r_tracked_satellite.set('none')
