@@ -181,6 +181,10 @@ The pass prediction consists of:
 * LOS azimuth
 * Duration - duration of the pass
 
+On the left hand side, there is a rotator information section. When the rotator is turned of, its current azimuth and elevation is displayed here. While tracking, you can see name of tracked satellite and its time until LOS. You can also change antennas polarization by clicking on one of the buttons - Vertical, Horizontal, RHCP or LHCP. The current polarization is also shown here. Below the table, there is information about the next pass and listbox of satellite currently selected for tracking. On to bottom of the column there is a time of the latest TLE update. Here is the GUI while tracking satellite [Planetum-1](https://db.satnogs.org/satellite/CBUM-7092-9005-4302-8636).
+
+![](/images/satellite_tracking_software-screenshot1.png)
+
 Here is a list of used Python packages:
 * [beyond](https://pypi.org/project/beyond/) - predicting satellite visibility
 * [datetime](https://docs.python.org/3/library/datetime.html) - operations with date and time
@@ -193,13 +197,10 @@ Here is a list of used Python packages:
 * [tkinter](https://docs.python.org/3/library/tkinter.html) - creating GUI
 * [time](https://docs.python.org/3/library/time.html) - time acces and conversions
 
-
 If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
 
 For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
 
-![](/images/satellite_tracking_software-screenshot0.png)
-![](/images/satellite_tracking_software-screenshot1.png)
 
 ## Experience with satellite tracking
 
