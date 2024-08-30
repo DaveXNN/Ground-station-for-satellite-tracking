@@ -138,7 +138,7 @@ The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. The f
 | director 7 | 296.8 | 1280.9 | 11.2 | 13.3 |
 
 ## Polarization switchers
-To change antenna polarization I built a polarization switcher. It is a device that is between antenna and receiver and can change the polarization between vertical, horizontal, right-handed circular polarization (RHCP) and left-handed circular polarization (LHCP). The device consists of two relays, that switch between two lenghts of coaxial cable, so they can shift the phase of comming signal from both antennas. VHF and UHF polarization switchers have different lenght of the cables because they are operating on different frequencies.
+To change antenna polarization I built a polarization switcher. It is a device that is between antenna and receiver and can change the polarization between vertical, horizontal, right-handed circular polarization (RHCP) and left-handed circular polarization (LHCP). The device consists of two relays, that switch between two lenghts of coaxial cable, so they can shift the phase of comming signal from both antennas. VHF and UHF polarization switchers have different lenght of the cables because they are operating on different frequencies. The polarization switcher is inserted into a 3d-printed box and its STL model is located [here](/stl-files/polarization_switcher/polarization_switcher.stl).
 
 ## Receiver and station computer
 Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
