@@ -1,12 +1,25 @@
 {
-    "program_name": "Satellite Tracking Software 1.1",
+    "program_name": "Satellite Tracking Software",
     "icon": "satellite.ico",
-    "tle_file": "TLE-active.txt",
-    "tracked_file": "tracked_sats.txt",
+    "tle_file": "tle_active.txt",
     "tle_source": "https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle",
+    "last_tle_update": "2024-08-30 06:07:58.907966",
+    "tle_update_period": 2,
     "station_latitude": 49.4862398,
     "station_longitude": 18.0405796,
     "station_altitude": 364.0,
-    "last_tle_update": "2024-02-24 06:25:52.596755",
-    "min_max": 20.0
+    "min_max": 20.0,
+    "tracked_satellites": [
+        "BDSAT-2",
+        "CAS-5A (FO-118)",
+        "FUNCUBE-1 (AO-73)",
+        "ISS (ZARYA)",
+        "NOAA 15",
+        "NOAA 18",
+        "NOAA 19",
+        "OSCAR 7 (AO-7)",
+        "PLANETUM1",
+        "VZLUSAT-2",
+        "XW-3 (CAS-9)"
+    ]
 }
