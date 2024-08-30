@@ -144,6 +144,7 @@ To change antenna polarization I built a polarization switcher. It is a device t
 Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
 
 ![Airspy Mini](/images/airspy_mini.jpg)
+
 Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is availabel [here](/source_code/station_computer)
 
 Each satellite has data about its position in the Earth orbit called TLE (Two-Line Element). They are updated every 2 hours from URL: https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle. This rotator uses the latest TLE data to predict satellite visibility in a specific location on the Earth. For satellite visibility prediction is used python beyond library (https://pypi.org/project/beyond/). Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
