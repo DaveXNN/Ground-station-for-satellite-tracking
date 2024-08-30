@@ -1,8 +1,18 @@
-import paho.mqtt.client as paho                                     # for subscribing data from MQTT broker
+###########################################################################################################################
+#                                                                                                                         #
+#    Author:         D. Nenicka                                                                                           #
+#    Created:        3. 11. 2023                                                                                          #
+#    Modified:       30. 8. 2024                                                                                          #
+#    Description:    Module for communicating with MQTT broker                                                            #
+#                                                                                                                         #
+###########################################################################################################################
 
-from datetime import datetime                                       # for operations with date and time
-from socket import gaierror                                         # for avoiding connection errors
-from threading import Timer                                         # for running more processes in parallel
+
+import paho.mqtt.client as paho                                     # module for subscribing data from MQTT broker
+
+from datetime import datetime                                       # module for operations with date and time
+from socket import gaierror                                         # module for avoiding connection errors
+from threading import Timer                                         # module for timing functions
 
 
 class Mqtt:
