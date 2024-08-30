@@ -166,7 +166,18 @@ PLANETUM1
 
 A text file tle_active.txt contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites.
 
-[beyond](https://pypi.org/project/beyond/).
+Here is a list of used Python packages:
+* [beyond](https://pypi.org/project/beyond/) - predicting satellite visibility
+* [datetime](https://docs.python.org/3/library/datetime.html) - operations with date and time
+* [json](https://docs.python.org/3/library/json.html) - coding and decoding json files
+* [numpy](https://numpy.org/) - math operations
+* [requests](https://pypi.org/project/requests/) - downloading TLE
+* [socket](https://docs.python.org/3/library/socket.html) - MQTT connection errors
+* [paho-mqtt](https://pypi.org/project/paho-mqtt/) - communicating with MQTT broker
+* [threading](https://docs.python.org/3/library/threading.html) - running functions in parallel
+* [tkinter](https://docs.python.org/3/library/tkinter.html) - creating GUI
+* [time](https://docs.python.org/3/library/time.html) - time acces and conversions
+
 
 If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
 
