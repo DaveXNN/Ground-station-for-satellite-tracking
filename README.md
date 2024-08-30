@@ -149,9 +149,7 @@ Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
 
 ![Airspy Mini](/images/airspy_mini.jpg)
 
-Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is available [here](/source_code/station_computer). The program has a graphical user interface (GUI) and is used for predicting satellite visibility and controlling rotator. The default screen looks like this:
-
-![](/images/satellite_tracking_software-screenshot0.png)
+Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is available [here](/source_code/station_computer). The program has a graphical user interface (GUI) and is used for predicting satellite visibility and controlling rotator.
 
 Within starting the program, the latest Two-line element (TLE) data are downloaded from [CelesTrak](https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle). The data are updated every 2 hours, because it is the same period as CelesTrak uses for publishing the newest version of TLE. It is necessary to use the latest data for predicting satellite visibility, because when it's too old, it may calculate the satellite position badly and the rotator won't be able to track the satellite correctly. Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
 
@@ -165,7 +163,16 @@ PLANETUM1
 2 52738  97.5700 346.3663 0004271 318.8227  41.2700 15.46625200122146
 ```
 
-A text file tle_active.txt contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites.
+A text file tle_active.txt contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites. Next to the All satellites listbox there is another listbox called Selected satellites, which shows all satellites selected for tracking using buttons Add to tracking and Remove from tracking. The default screen looks like this:
+
+![](/images/satellite_tracking_software-default.png)
+
+You can select any of the satellites in All satellites listbox and predict its visibility. Information about the pass will be shown below the listbox
+
+![](/images/satellite_tracking_software-predicting.png)
+
+and consist of:
+* AOS (aquistition of the satellite)
 
 Here is a list of used Python packages:
 * [beyond](https://pypi.org/project/beyond/) - predicting satellite visibility
@@ -184,7 +191,7 @@ If we have the latest TLE data, we can track each satellite in the Earth orbit. 
 
 For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
 
-
+![](/images/satellite_tracking_software-screenshot0.png)
 ![](/images/satellite_tracking_software-screenshot1.png)
 
 ## Experience with satellite tracking
