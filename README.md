@@ -83,6 +83,7 @@ Here is a list of used Python packages:
 * [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) - controling digital pins
 * [paho-mqtt](https://pypi.org/project/paho-mqtt/) - communicating with MQTT broker
 * [threading](https://docs.python.org/3/library/threading.html) - running functions in parallel
+* [time](https://docs.python.org/3/library/time.html) - time acces and conversions
 
 For running script on boot of Raspberry Pi, I modified file ```/etc/rc.local``` by adding a line ```python3 /home/rotator/Rotator.py```, so the final file looks like this:
 ```
