@@ -151,16 +151,16 @@ Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
 
 Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is available [here](/source_code/station_computer). The program has a graphical user interface (GUI) and is used for predicting satellite visibility and controlling rotator. The program configuration is in a json file [configuration.json](/source_code/station_computer/configuration.json).
 
-Within starting the program, the latest Two-line element (TLE) data are downloaded from [CelesTrak](https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle). The data are updated every 2 hours, because it is the same period as CelesTrak uses for publishing the newest version of TLE. It is necessary to use the latest data for predicting satellite visibility, because when it's too old, it may calculate the satellite position badly and the rotator won't be able to track the satellite correctly. Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
+Within starting the program, the latest Two-line element (TLE) data are downloaded from [CelesTrak](https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle). The data are updated every 2 hours, because it is the same period as CelesTrak uses for publishing the newest version of TLE. It is necessary to use the latest data for predicting satellite visibility, because when it's too old, the program may calculate the satellite position badly and the rotator won't be able to track the satellite correctly. Here is an example of TLE for the International Space Station or Czech satellite Planetum-1 from 31/8/2024:
 
 ```
 ISS (ZARYA)             
-1 25544U 98067A   23216.30597424  .00016406  00000+0  29387-3 0  9996
-2 25544  51.6415  90.1197 0000976 153.7733 359.7746 15.50094272409258
+1 25544U 98067A   24243.69891984  .00053939  00000+0  97276-3 0  9991
+2 25544  51.6407 306.1908 0011145 301.8729 210.3060 15.49164437470102
 
 PLANETUM1               
-1 52738U 22057G   24218.26634944  .00072435  00000+0  14435-2 0  9995
-2 52738  97.5700 346.3663 0004271 318.8227  41.2700 15.46625200122146
+1 52738U 22057G   24244.10463033  .00126959  00000+0  21033-2 0  9999
+2 52738  97.5706  13.4568 0006175 242.8845 117.1778 15.51691004126148
 ```
 
 A text file tle_active.txt contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites. Next to the All satellites listbox there is another listbox called Selected satellites, which shows all satellites selected for tracking using buttons Add to tracking and Remove from tracking. The default screen looks like this:
