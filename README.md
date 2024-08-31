@@ -77,6 +77,10 @@ NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8
 ### Software
 Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator).
 
+To install MQTT broker on Raspberry Pi I used a command ```sudo apt install -y mosquitto mosquitto-clients```
+
+and to make Mosquitto auto start when the Raspberry Pi boots I used a command ```sudo systemctl enable mosquitto.service```.
+
 [Rotator.py](/source_code/rotator/Rotator.py) is a main script that is run on boot. It initializes all modules and subscribes topics used to control rotator. There is also module [Stepper.py](/source_code/rotator/Stepper.py) to control stepper motors, module [PolarizationSwitcher.py](/source_code/rotator/PolarizationSwitcher.py) to control polarazation switchers and module [Publisher.py](/source_code/rotator/Publisher.py) to send rotator current azimuth and elevation back to station computer.
 
 Here is a list of used Python packages:
@@ -144,11 +148,12 @@ The UHF Yagi antenna has 9 elements - reflector, radiator and 7 directors. The f
 ## Polarization switchers
 To change antenna polarization I built a polarization switcher. It is a device that is between antenna and receiver and can change the polarization between vertical, horizontal, right-handed circular polarization (RHCP) and left-handed circular polarization (LHCP). The device consists of two relays, that switch between two lenghts of coaxial cable, so they can shift the phase of comming signal from both antennas. VHF and UHF polarization switchers have different lenght of the cables because they are operating on different frequencies. The polarization switcher is inserted into a 3d-printed box and its STL model is located [here](/stl-files/polarization_switcher/polarization_switcher.stl).
 
-## Receiver and station computer
+## Receiver
 Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
 
 ![Airspy Mini](/images/airspy_mini.jpg)
 
+## Station computer software
 Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is available [here](/source_code/station_computer). The program has a graphical user interface (GUI) and is used for predicting satellite visibility and controlling rotator. The program configuration is in a json file [configuration.json](/source_code/station_computer/configuration.json).
 
 Within starting the program, the latest Two-line element (TLE) data are downloaded from [CelesTrak](https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle). The data are updated every 2 hours, because it is the same period as CelesTrak uses for publishing the newest version of TLE. It is necessary to use the latest data for predicting satellite visibility, because when it's too old, the program may calculate the satellite position badly and the rotator won't be able to track the satellite correctly. Here is an example of TLE for the International Space Station or Czech satellite Planetum-1 from 31/8/2024:
@@ -167,7 +172,7 @@ A text file tle_active.txt contains TLE of all active satellites on the Earth's 
 
 ![](/images/satellite_tracking_software-default.png)
 
-You can select any of the satellites in All satellites listbox and predict its visibility. Information about the pass will be shown below in the table. Here is an example predict for International Space Station (ISS):
+You can select any of the satellites in All satellites listbox and predict its visibility. Information about the pass will be shown below in the table. Here is an example predict for the International Space Station (ISS):
 
 ![](/images/satellite_tracking_software-predicting.png)
 
@@ -197,10 +202,8 @@ Here is a list of used Python packages:
 * [tkinter](https://docs.python.org/3/library/tkinter.html) - creating GUI
 * [time](https://docs.python.org/3/library/time.html) - time acces and conversions
 
-If we have the latest TLE data, we can track each satellite in the Earth orbit. This rotator is designed primarily for tracking satellites in the low Earth orbit (LEO), it means below an altitude of 2 000 km.
-
-For the next sections we need to define two important variables - azimuth and elevation of a satellite. Azimuth and Elevation are measures used to identify the position of a satellite flying overhead. Azimuth tells you what direction to face and elevation tells you how high up in the sky to look. Both are measured in degrees. Azimuth varies from 0° to 360° and elevation from 0° to 90°.
-
+## Functionality
+In the beginning you select all satellites you want to track in the GUI. Then you click on the Predict button and the program calculates the first passes of selected satellites that is above minimum elevation set in [configuration.json](/source_code/station_computer/configuration.json). When any of the selected satellites appears above the horizon, station computer sends AOS azimuth to the rotator and the rotator moves to that azimuth. Then the station computer begins to send azimuth and elevation changes of satellite position in time. When the tracking is finished, the rotator returns to its default position (AZ: 0, EL: 0) and waits for another passing selected satellite to track.
 
 ## Experience with satellite tracking
 
