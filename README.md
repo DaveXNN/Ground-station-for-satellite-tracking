@@ -149,7 +149,7 @@ Receiver [Airspy Mini](https://airspy.com/airspy-mini/) is used here.
 
 ![Airspy Mini](/images/airspy_mini.jpg)
 
-Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is available [here](/source_code/station_computer). The program has a graphical user interface (GUI) and is used for predicting satellite visibility and controlling rotator.
+Station computer (laptop) has a program called Satellite Tracking Software developed in Python 3.10. Source code is available [here](/source_code/station_computer). The program has a graphical user interface (GUI) and is used for predicting satellite visibility and controlling rotator. The program configuration is in a json file [configuration.json](/source_code/station_computer/configuration.json).
 
 Within starting the program, the latest Two-line element (TLE) data are downloaded from [CelesTrak](https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle). The data are updated every 2 hours, because it is the same period as CelesTrak uses for publishing the newest version of TLE. It is necessary to use the latest data for predicting satellite visibility, because when it's too old, it may calculate the satellite position badly and the rotator won't be able to track the satellite correctly. Here is an example of TLE for the International Space Station or Czech satellite Planetum-1:
 
