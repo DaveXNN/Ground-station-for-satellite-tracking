@@ -206,6 +206,7 @@ Here is a list of used Python packages:
 In the beginning you select all satellites you want to track in the GUI. Then you click on the Predict button and the program calculates the first passes of selected satellites that is above minimum elevation set in [configuration.json](/source_code/station_computer/configuration.json). When any of the selected satellites appears above the horizon, station computer sends AOS azimuth to the rotator and the rotator moves to that azimuth. Then the station computer begins to send azimuth and elevation changes of satellite position in time. When the tracking is finished, the rotator returns to its default position (AZ: 0, EL: 0) and waits for another passing selected satellite to track.
 
 ## Experience with satellite tracking
+During the testing, many various satellites have been tracked.
 
 ![](/images/sdr_sharp00.png)
 ![](/images/sdr_sharp01.png)
