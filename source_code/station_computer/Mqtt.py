@@ -8,28 +8,28 @@
 ###########################################################################################################################
 
 
-import paho.mqtt.client as paho                                     # module for subscribing data from MQTT broker
+import paho.mqtt.client as paho                                     # for subscribing data from MQTT broker
 
-from datetime import datetime                                       # module for operations with date and time
-from socket import gaierror                                         # module for avoiding connection errors
-from threading import Timer                                         # module for timing functions
+from datetime import datetime                                       # for operations with date and time
+from socket import gaierror                                         # for avoiding connection errors
+from threading import Timer                                         # for running more processes in parallel
 
 
 class Mqtt:
     def __init__(self):
         self.client = paho.Client()                                 # create mqtt client
         self.client.username_pw_set(<username>, password=<password>)# mqtt server authorization
-        self.connected = False
+        self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
-        self.enabled = True
-        self.try_connect()
+        self.connect_thread = Timer(0, self.try_connect)            # function that tries to establish a connection with MQTT broker
+        self.connect_thread.start()
 
     @staticmethod
-    def print_info(msg):
+    def print_info(msg):                                            # function that prints module information in terminal
         print(f'{datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}, {msg}')
 
-    def try_connect(self):
+    def try_connect(self):                                          # function that tries to establish a connection with MQTT broker
         try:
             self.client.connect(<hostname>, port=<port>)
             self.client.on_connect = self.on_connect
@@ -39,16 +39,15 @@ class Mqtt:
             self.client.loop_start()
         except gaierror:
             self.print_info('laptop could not connect to MQTT Broker')
-            if self.enabled:
-                self.connect_thread = Timer(30, self.try_connect)
-                self.connect_thread.start()
+            self.connect_thread = Timer(30, self.try_connect)
+            self.connect_thread.start()
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self.print_info('laptop connected to MQTT broker')
             self.connected = True
         else:
-            self.print_info('laptop could not connect to MQTT broker' + str(rc))
+            self.print_info(f'laptop could not connect to MQTT broker, code {rc}')
             self.connected = False
 
     def on_message(self, client, userdata, message):
