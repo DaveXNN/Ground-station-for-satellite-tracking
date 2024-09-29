@@ -21,7 +21,7 @@ from tkinter import *                                               # tkinter pa
 from time import sleep                                              # module with sleep() function
 
 
-from Mqtt import Mqtt                                               # module for communication with MQTT broker
+from Mqtt import Mqtt                                               # for communication with MQTT server
 
 
 class TrackingTool(Tk):
@@ -507,19 +507,18 @@ class TrackingTool(Tk):
         self.t_update.start()
 
     def close_window(self):
-        mqtt.enabled = False
         try:
             mqtt.connect_thread.cancel()
         except AttributeError:
             pass
         try:
-            self.tracking_thread.join()
+            self.tracking_thread.join(timeout=0)
         except AttributeError:
             pass
         self.t_update.cancel()
         for x in self.tso:
             try:
-                x.create_data_thread.join()
+                x.create_data_thread.join(timeout=0)
             except AttributeError:
                 pass
             try:
