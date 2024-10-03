@@ -3,7 +3,7 @@
     "icon": "satellite.ico",
     "tle_file": "tle_active.txt",
     "tle_source": "https://celestrak.org/NORAD/elements/gp.php?GROUP=ACTIVE&FORMAT=tle",
-    "last_tle_update": "2024-08-30 06:07:58.907966",
+    "last_tle_update": "2024-10-03 10:05:57.560761+00:00",
     "tle_update_period": 2,
     "station_latitude": 49.4862398,
     "station_longitude": 18.0405796,
