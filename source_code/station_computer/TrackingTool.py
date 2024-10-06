@@ -42,16 +42,26 @@ class TrackingTool(Tk):
 
         self.tracking_thread = Thread(target=self.track_satellites)
 
-        # List and string variables definition
+        # Variables
         self.satellites = []                                        # list of all satellites on Earth orbit
         self.tracked_satellites = []                                # list of selected satellites
         self.tso = []                                               # list of TrackedSatellite objects
+        self.track_button_pressed = False                           # True if track button has already been pressed
+        self.tracking = False                                       # True if rotator is currently tracking a sat
+        self.ts_los_time = None
+        self.first_pass_time = None
+        self.tracked_satellite = 'none'
+        self.next_satellite = 'none'
+
+        # Tkinter variables
         self.ss0 = StringVar()                                      # text variable for searching in listbox0
         self.ss1 = StringVar()                                      # text variable for searching in listbox1
         self.msv0 = StringVar()                                     # text variable for showing number of all satellites
         self.msv1 = StringVar()                                     # text variable for showing number of s. satellites
         self.msv2 = StringVar()                                     # text variable for showing number of t. satellites
         self.msv3 = StringVar()                                     # text variable for pass predictions
+        self.msv4 = StringVar()
+        self.msv5 = StringVar()
         self.date = StringVar()
         self.aos_time = StringVar()
         self.aos_az = StringVar()
@@ -67,21 +77,24 @@ class TrackingTool(Tk):
         self.r_el = StringVar()
         self.az_offset_var = StringVar()
         self.el_offset_var = StringVar()
-        self.r_tracked_satellite = StringVar()
+        self.r_satellite = StringVar()
         self.r_time_till_los = StringVar()
         self.r_pol = StringVar()
         self.mqtt_status = StringVar()
         self.first_pass_info = StringVar()
         self.tle_info = StringVar()
         self.msv3.set('First pass prediction:')
-        self.r_tracked_satellite.set('none')
+        self.msv4.set('Next satellite:')
+        self.msv5.set('Tracking starts in:')
+        self.r_satellite.set(self.next_satellite)
+        self.r_time_till_los.set('')
         self.r_pol.set('Vertical')
         self.tle_info.set(f'Last TLE update: {self.tle_updator.last_update.strftime("%d %B %Y %H:%M:%S UTC")}')
+
+
+        # Azimuth and elevation offsets
         self.az_offset = Offset(self, self.az_offset_var)
         self.el_offset = Offset(self, self.el_offset_var)
-        self.track_button_pressed = False                           # True if track button has already been pressed
-        self.tracking = False                                       # True if rotator is currently tracking a sat
-        self.ts_los_time = datetime.now()
 
         # Labels definition
         self.main_title = Label(self, text=self.program_name, font='Helvetica 20 bold', bg=self.bg_color,
@@ -132,9 +145,9 @@ class TrackingTool(Tk):
         self.rl04.place(relx=0.525, rely=0.25, anchor=W)
         self.rl05 = Label(self, text='EL offset:', bg=self.bg_color, fg=self.text_color)
         self.rl05.place(relx=0.775, rely=0.25, anchor=W)
-        self.rl06 = Label(self, text='Tracked satellite:', bg=self.bg_color, fg=self.text_color)
+        self.rl06 = Label(self, textvariable=self.msv4, bg=self.bg_color, fg=self.text_color)
         self.rl06.place(relx=0.525, rely=0.30, anchor=W)
-        self.rl07 = Label(self, text='Time until LOS:', bg=self.bg_color, fg=self.text_color)
+        self.rl07 = Label(self, textvariable=self.msv5, bg=self.bg_color, fg=self.text_color)
         self.rl07.place(relx=0.775, rely=0.30, anchor=W)
         self.rl08 = Label(self, text='Antenna polarization:', bg=self.bg_color, fg=self.text_color)
         self.rl08.place(relx=0.525, rely=0.35, anchor=W)
@@ -184,7 +197,7 @@ class TrackingTool(Tk):
         self.re4.place(relx=0.650, rely=0.25, relwidth=0.05, anchor=W)
         self.re5 = Entry(textvariable=self.el_offset_var, justify=CENTER, bg=self.bg_color, fg=self.text_color)
         self.re5.place(relx=0.900, rely=0.25, relwidth=0.05, anchor=W)
-        self.re6 = Entry(textvariable=self.r_tracked_satellite, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re6 = Entry(textvariable=self.r_satellite, justify=CENTER, bg=self.bg_color, fg=self.text_color)
         self.re6.place(relx=0.625, rely=0.30, relwidth=0.1, anchor=W)
         self.re7 = Entry(textvariable=self.r_time_till_los, justify=CENTER, bg=self.bg_color, fg=self.text_color)
         self.re7.place(relx=0.875, rely=0.30, relwidth=0.1, anchor=W)
@@ -253,7 +266,6 @@ class TrackingTool(Tk):
         self.update_r_info()
         self.listbox_init()
 
-
     @staticmethod
     def fill_listbox(listbox, content):                             # fill listbox with all satellite names
         listbox.delete(0, END)
@@ -265,6 +277,50 @@ class TrackingTool(Tk):
         hours, remainder = divmod(td.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
+
+    def start_tracking(self):
+        self.tracking_thread.start()
+
+    def listbox_init(self):
+        with open(self.tle_file, 'r') as file:
+            self.satellites = sorted(list(map(str.strip, file.readlines()[::3])))
+        self.update_listbox0()
+        self.update_listbox1()
+        self.update_listbox2()
+
+    def update_r_info(self):                                        # display rotator information
+        self.utctime.set(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
+        self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        self.r_az.set(self.mqtt.az)
+        self.r_el.set(self.mqtt.el)
+        if self.tracking:
+            self.msv4.set('Tracked satellite:')
+            self.msv5.set('Time until LOS:')
+            self.r_satellite.set(self.tracked_satellite)
+            self.r_time_till_los.set(self.timedelta_formatter(self.ts_los_time - datetime.now(timezone.utc)))
+        else:
+            self.msv4.set('Next satellite:')
+            self.msv5.set('Tracking starts in:')
+            if self.first_pass_time is not None:
+                self.r_satellite.set(self.next_satellite)
+                self.r_time_till_los.set(self.timedelta_formatter(self.first_pass_time - datetime.now(timezone.utc)))
+        if self.mqtt.connected:
+            self.mqtt_status.set('connected')
+        else:
+            self.mqtt_status.set('disconnected')
+        self.after(1000, self.update_r_info)
+
+    def update_listbox0(self):
+        self.fill_listbox(self.listbox0, self.satellites)
+        self.msv0.set(f'All satellites ({len(self.satellites)}): ')
+
+    def update_listbox1(self):
+        self.fill_listbox(self.listbox1, sorted(self.selected_satellites))
+        self.msv1.set(f'Selected satellites ({len(self.selected_satellites)}): ')
+
+    def update_listbox2(self):
+        self.fill_listbox(self.listbox2, self.tracked_satellites)
+        self.msv2.set(f'Tracked satellites ({len(self.tracked_satellites)}): ')
 
     def az_increase_offset(self):
         self.az_offset.increase()
@@ -286,31 +342,6 @@ class TrackingTool(Tk):
         self.r_pol.set(pol)
         self.mqtt.publish_polarization(pol)
 
-    def start_tracking(self):
-        self.tracking_thread.start()
-
-    def update_r_info(self):                                        # display rotator information
-        self.utctime.set(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
-        self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        self.r_az.set(self.mqtt.az)
-        self.r_el.set(self.mqtt.el)
-        if self.tracking:
-            self.r_time_till_los.set(self.timedelta_formatter(self.ts_los_time - datetime.now(timezone.utc)))
-        else:
-            self.r_time_till_los.set('')
-        if self.mqtt.connected:
-            self.mqtt_status.set('connected')
-        else:
-            self.mqtt_status.set('disconnected')
-        self.after(1000, self.update_r_info)
-
-    def listbox_init(self):
-        with open(self.tle_file, 'r') as file:
-            self.satellites = sorted(list(map(str.strip, file.readlines()[::3])))
-        self.update_listbox0()
-        self.update_listbox1()
-        self.update_listbox2()
-
     def go0(self, event):
         cs = self.listbox0.curselection()
         self.ss0.set(self.listbox0.get(cs))
@@ -327,28 +358,32 @@ class TrackingTool(Tk):
         self.ss1.set(self.listbox2.get(cs))
 
     def search0(self, event):                                       # fill listbox0 with filtered satellite names
-        word = self.ss0.get()
+        word = self.ss0.get().upper()
         self.listbox0.delete(0, END)
         if word == '':
             self.fill_listbox(self.listbox0, self.satellites)
+            self.msv0.set(f'All satellites ({len(self.satellites)}): ')
             return
         filtered_data = list()
         for item in self.satellites:
             if item.find(word) >= 0:
                 filtered_data.append(item)
         self.fill_listbox(self.listbox0, filtered_data)
+        self.msv0.set(f'All satellites ({len(filtered_data)}): ')
 
     def search1(self, event):                                       # fill listbox1 with filtered satellite names
-        word = self.ss1.get()
+        word = self.ss1.get().upper()
         self.listbox1.delete(0, END)
         if word == '':
             self.fill_listbox(self.listbox1, self.selected_satellites)
+            self.msv1.set(f'Selected satellites ({len(self.selected_satellites)}): ')
             return
         filtered_data = list()
         for item in self.selected_satellites:
             if item.find(word) >= 0:
                 filtered_data.append(item)
         self.fill_listbox(self.listbox1, filtered_data)
+        self.msv1.set(f'Selected satellites ({len(filtered_data)}): ')
 
     def add_to_tracked(self):                                       # add satellite to tracking
         sat = self.sat_entry0.get()
@@ -378,6 +413,12 @@ class TrackingTool(Tk):
             self.find_first_pass()
 
     def find_first_pass(self):
+        if len(self.tso) == 0:
+            return
+        if len(self.tso) == 1:
+            sat = self.tso[0]
+            self.first_pass_time = sat.aos_time
+            self.next_satellite = sat.name
         if len(self.tso) > 1:
             my_dict = {}
             for x in self.tso:
@@ -385,34 +426,20 @@ class TrackingTool(Tk):
             sorted_list = sorted(my_dict.items(), key=lambda p: p[1], reverse=False)
             first_pass = list(sorted_list[0])
             first_sat = first_pass[0]
-            if first_sat == self.r_tracked_satellite.get():
+            if first_sat == self.tracked_satellite:
                 first_pass = list(sorted_list[1])
                 first_sat = first_pass[0]
-            first_pass_time = first_pass[1].strftime('%d %B %Y %H:%M:%S UTC')
-            for x in self.tso:
-                if x.name == first_sat:
-                    self.first_pass_info.set(f'Next pass: {first_sat}, AOS: {first_pass_time}, MAX: {x.max_el}')
-                    self.predict(first_sat)
-
-    def update_listbox0(self):
-        self.fill_listbox(self.listbox0, self.satellites)
-        self.msv0.set(f'All satellites ({len(self.satellites)}): ')
-
-    def update_listbox1(self):
-        self.fill_listbox(self.listbox1, sorted(self.selected_satellites))
-        self.msv1.set(f'Selected satellites ({len(self.selected_satellites)}): ')
-
-    def update_listbox2(self):
-        self.fill_listbox(self.listbox2, self.tracked_satellites)
-        self.msv2.set(f'Tracked satellites ({len(self.tracked_satellites)}): ')
+            self.first_pass_time = first_pass[1]
+            self.next_satellite = first_sat
+        self.first_pass_info.set(f'Next pass: {self.next_satellite}, AOS: {self.first_pass_time.strftime('%d %B %Y %H:%M:%S UTC')}')
 
     def predict(self, sat):                                         # create data about the pass of selected satellite
         if sat in self.satellites:
             if sat in self.tracked_satellites:
                 for x in self.tso:
                     if x.name == sat:
-                        self.show_prediction(x.name, x.aos_time, x.max_time, x.los_time, x.aos_az, x.max_az, x.los_az,
-                                             x.max_el)
+                        self.show_prediction(x.name, x.aos_time, x.max_time, x.los_time, x.aos_az, x.max_az, x.los_az, x.max_el)
+                        break
             else:
                 aos_time, max_time, los_time, aos_az, max_az, los_az, max_el = self.beyond_tools.predict_first_pass(sat)
                 try:
@@ -448,17 +475,20 @@ class TrackingTool(Tk):
         self.duration.set('')
 
     def close_window(self):
-        if self.mqtt.connect_thread.is_alive():
-            self.mqtt.connect_thread.cancel()
-        if self.tracking_thread.is_alive():
-            self.tracking_thread.join()
-        self.tle_updator.update_thread.cancel()
-        for x in self.tso:
+        if not self.tracking or not self.mqtt.connected:
             try:
-                x.tracking_thread.cancel()
+                self.mqtt.connect_thread.cancel()
             except AttributeError:
                 pass
-        self.destroy()
+            if self.tracking_thread.is_alive():
+                self.tracking_thread.join()
+            self.tle_updator.update_thread.cancel()
+            for x in self.tso:
+                try:
+                    x.tracking_thread.cancel()
+                except AttributeError:
+                    pass
+            self.destroy()
 
 
 class Offset:
@@ -498,6 +528,7 @@ class TrackedSatellite:
         self.start_time_seconds = 0                                 # time in seconds until AOS
         self.delay_before_tracking = timedelta(seconds=10)          # time needed for rotator to turn to AOS azimuth
         self.app = app
+        self.tracking_thread = None
         self.create_data()
 
     def print_info(self, msg):                                      # print info with satellite name and timestamp
@@ -512,18 +543,18 @@ class TrackedSatellite:
         self.start_time_seconds = (self.aos_time - datetime.now(timezone.utc) - self.delay_before_tracking).seconds
         self.tracking_thread = Timer(self.start_time_seconds, self.track)
         self.tracking_thread.start()
-        self.print_info(f'created data, AOS: {self.aos_time}, MAX elevation: {self.max_el}')
+        self.app.find_first_pass()
+        self.print_info(f'created data, AOS: {self.aos_time.strftime("%Y-%m-%d %H:%M:%S UTC")}, MAX elevation: {self.max_el}')
 
     def track(self):                                                # track the satellite when crossing the sky
         if not self.app.tracking:                                        # if any other satellite is not tracked right now
             if self.aos_time > datetime.now(timezone.utc):
                 self.app.tracking = True
-                self.app.r_tracked_satellite.set(self.name)
+                self.app.tracked_satellite = self.name
                 self.app.ts_los_time = self.los_time
                 self.app.mqtt.publish_action('start')
                 self.app.find_first_pass()
                 self.app.predict(self.name)
-                sleep(0.1)
                 wait_time = (self.aos_time - datetime.now(timezone.utc)).total_seconds()
                 self.print_info(f'will fly over your head in {int(wait_time)} seconds')
                 self.app.mqtt.publish_start_azimuth(self.aos_az)
@@ -541,13 +572,10 @@ class TrackedSatellite:
                     sleep(delta_t)
                 self.app.mqtt.publish_action('stop')
                 self.print_info('tracking ended')
-                self.app.r_tracked_satellite.set('none')
-                self.app.find_first_pass()
                 self.app.tracking = False
-                self.create_data()
+                self.app.predict(self.app.next_satellite)
             else:
                 self.print_info('tracking passed')
-                self.create_data(init_delay=2)
         else:
-            self.print_info(f'cannot be tracked now, because {self.app.r_tracked_satellite.get()} is being tracked')
-            self.create_data(init_delay=2)
+            self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite} is being tracked')
+        self.create_data(init_delay=1)

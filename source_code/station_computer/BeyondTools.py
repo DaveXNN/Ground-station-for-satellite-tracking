@@ -45,8 +45,7 @@ class BeyondTools:
         max_az = 0
         max_el = 0
         tle = self.get_tle(satellite)
-        for orb in self.station.visibility(tle.orbit(), start=Date.now(), stop=timedelta(hours=48),
-                                           step=timedelta(seconds=50), events=True):
+        for orb in self.station.visibility(tle.orbit(), start=Date.now(), stop=timedelta(hours=48), step=timedelta(seconds=50), events=True):
             if orb.event and orb.event.info.startswith('AOS'):
                 aos_time = datetime.strptime(''.join([str(orb.date)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
                 aos_az = degrees(-orb.theta) % 360
@@ -66,16 +65,16 @@ class BeyondTools:
         aos_az = 0
         max_az = 0
         los_az = 0
-        aos_el = 0
         max_el = 0
         times = []
         azims = []
         elevs = []
+        ok = False
         delay = timedelta(hours=init_delay)
         tle = self.get_tle(satellite)
-        while max_el <= self.min_max_elevation or aos_el > 0.1:
-            for orb in self.station.visibility(tle.orbit(), start=(Date.now() + delay), stop=self.prediction_period,
-                                               step=timedelta(seconds=10), events=True):
+        while max_el <= self.min_max_elevation or not ok:
+            ok = False
+            for orb in self.station.visibility(tle.orbit(), start=(Date.now() + delay), stop=self.prediction_period, step=timedelta(seconds=10), events=True):
                 orb_date = datetime.strptime(''.join([str(orb.date)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
                 azimuth = degrees(-orb.theta) % 360
                 elevation = degrees(orb.phi)
@@ -85,7 +84,7 @@ class BeyondTools:
                 if orb.event and orb.event.info.startswith('AOS'):
                     aos_time = orb_date
                     aos_az = azimuth
-                    aos_el = elevation
+                    ok = True
                 if orb.event and orb.event.info.startswith('MAX'):
                     max_time = orb_date
                     max_az = azimuth
