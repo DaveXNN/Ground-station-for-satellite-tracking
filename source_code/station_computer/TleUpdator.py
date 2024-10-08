@@ -11,19 +11,16 @@
 from datetime import datetime, timedelta, timezone                  # module for operations with date and time
 from threading import Timer                                         # module for running more processes in parallel
 
-import json                                                         # module for working with json files
 import requests                                                     # module for downloading
 
 
 class TleUpdator:
-    def __init__(self, configuration_file):
-        self.configuration_file = configuration_file
-        with open(self.configuration_file) as json_file:            # open configuration file
-            conf = json.load(json_file)                             # load content of configuration file
-            self.tle_file = conf['tle_file']                        # text file with TLE data
-            self.tle_source = conf['tle_source']                    # source of TLE data
-            self.last_update = datetime.strptime(conf['last_tle_update'], '%Y-%m-%d %H:%M:%S.%f%z')  # TLE update
-            self.update_period = timedelta(hours=conf['tle_update_period'])     # TLE data update period
+    def __init__(self, conf):
+        self.json_tool = conf
+        self.tle_file = conf.content['tle_file']                        # text file with TLE data
+        self.tle_source = conf.content['tle_source']                    # source of TLE data
+        self.last_update = datetime.strptime(conf.content['last_tle_update'], '%Y-%m-%d %H:%M:%S.%f%z')  # TLE update
+        self.update_period = timedelta(hours=conf.content['tle_update_period'])     # TLE data update period
         update_time = datetime.now(timezone.utc) - self.last_update
         if update_time > self.update_period:
             self.update_tle()
@@ -38,11 +35,7 @@ class TleUpdator:
                 self.last_update = datetime.now(timezone.utc)
                 with open(self.tle_file, 'wb') as f:
                     f.write(response.content)
-                with open(self.configuration_file, 'r') as g:
-                    content = json.load(g)
-                    content['last_tle_update'] = str(self.last_update)
-                with open(self.configuration_file, 'w') as h:
-                    json.dump(content, h, indent=4)
+                self.json_tool.overwrite_variable('last_tle_update', str(self.last_update))
         except requests.exceptions.ConnectionError:
             pass
         self.update_thread = Timer(self.update_period.total_seconds(), self.update_tle)

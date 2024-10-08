@@ -8,8 +8,6 @@
 ########################################################################################################################
 
 
-import json                                                         # module for working with json files
-
 from datetime import datetime, timedelta, timezone                  # module for operations with date and time
 from threading import Thread, Timer                                 # module for running more processes in parallel
 from tkinter import *                                               # tkinter package for creating GUI
@@ -17,20 +15,17 @@ from time import sleep                                              # module wit
 
 
 class TrackingTool(Tk):
-    def __init__(self, configuration_file, beyond_tools, mqt, tle_updator):
+    def __init__(self, json_tool, beyond_tools, mqt, tle_updator):
         super().__init__()
-        self.configuration_file = configuration_file                # json configuration file
+        self.json_tool = json_tool                                  # json configuration file
         self.mqtt = mqt                                             # object for MQTT communication
         self.beyond_tools = beyond_tools                            # object for satellite pass predictions
         self.tle_updator = tle_updator                              # object for updating TLE data
 
         # Load program variables from json configuration file
-        with open(self.configuration_file) as json_file:            # open configuration file
-            conf = json.load(json_file)                             # load content of configuration file
-            self.program_name = conf['program_name']                # program name
-            self.icon = conf['icon']                                # icon file of the program window
-            self.tle_file = conf['tle_file']                        # text file with TLE data
-            self.selected_satellites = conf['tracked_satellites']   # list of tracked satellites
+        self.program_name = self.json_tool.content['program_name']                # program name
+        self.icon = self.json_tool.content['icon']                                # icon file of the program window
+        self.selected_satellites = self.json_tool.content['tracked_satellites']   # list of tracked satellites
 
         # Initialize basic GUI variables
         self.iconbitmap(self.icon)                                  # program icon
@@ -43,7 +38,6 @@ class TrackingTool(Tk):
         self.tracking_thread = Thread(target=self.track_satellites)
 
         # Variables
-        self.satellites = []                                        # list of all satellites on Earth orbit
         self.tracked_satellites = []                                # list of selected satellites
         self.tso = []                                               # list of TrackedSatellite objects
         self.track_button_pressed = False                           # True if track button has already been pressed
@@ -282,8 +276,6 @@ class TrackingTool(Tk):
         self.tracking_thread.start()
 
     def listbox_init(self):
-        with open(self.tle_file, 'r') as file:
-            self.satellites = sorted(list(map(str.strip, file.readlines()[::3])))
         self.update_listbox0()
         self.update_listbox1()
         self.update_listbox2()
@@ -311,8 +303,8 @@ class TrackingTool(Tk):
         self.after(1000, self.update_r_info)
 
     def update_listbox0(self):
-        self.fill_listbox(self.listbox0, self.satellites)
-        self.msv0.set(f'All satellites ({len(self.satellites)}): ')
+        self.fill_listbox(self.listbox0, self.beyond_tools.satellites)
+        self.msv0.set(f'All satellites ({self.beyond_tools.satellites_count}): ')
 
     def update_listbox1(self):
         self.fill_listbox(self.listbox1, sorted(self.selected_satellites))
@@ -361,11 +353,10 @@ class TrackingTool(Tk):
         word = self.ss0.get().upper()
         self.listbox0.delete(0, END)
         if word == '':
-            self.fill_listbox(self.listbox0, self.satellites)
-            self.msv0.set(f'All satellites ({len(self.satellites)}): ')
+            self.update_listbox0()
             return
         filtered_data = list()
-        for item in self.satellites:
+        for item in self.beyond_tools.satellites:
             if item.find(word) >= 0:
                 filtered_data.append(item)
         self.fill_listbox(self.listbox0, filtered_data)
@@ -387,7 +378,7 @@ class TrackingTool(Tk):
 
     def add_to_tracked(self):                                       # add satellite to tracking
         sat = self.sat_entry0.get()
-        if sat in self.satellites and sat not in self.selected_satellites:
+        if sat in self.beyond_tools.satellites and sat not in self.selected_satellites:
             self.selected_satellites.append(sat)
         self.update_listbox1()
         self.ss0.set('')
@@ -404,11 +395,7 @@ class TrackingTool(Tk):
             self.track_button_pressed = True
             self.tracked_satellites = sorted(self.selected_satellites)
             self.update_listbox2()
-            with open(self.configuration_file, 'r') as g:
-                content = json.load(g)
-                content['tracked_satellites'] = self.tracked_satellites
-            with open(self.configuration_file, 'w') as h:
-                json.dump(content, h, indent=4)
+            self.json_tool.overwrite_variable('tracked_satellites', self.tracked_satellites)
             self.tso = [TrackedSatellite(self, sat) for sat in self.tracked_satellites]
             self.find_first_pass()
 
@@ -433,8 +420,10 @@ class TrackingTool(Tk):
             self.next_satellite = first_sat
         self.first_pass_info.set(f'Next pass: {self.next_satellite}, AOS: {self.first_pass_time.strftime('%d %B %Y %H:%M:%S UTC')}')
 
-    def predict(self, sat):                                         # create data about the pass of selected satellite
-        if sat in self.satellites:
+    def predict(self, sat):                                         # create data about the first pass of selected satellite
+        if sat == '':
+            return
+        if sat in self.beyond_tools.satellites:
             if sat in self.tracked_satellites:
                 for x in self.tso:
                     if x.name == sat:
