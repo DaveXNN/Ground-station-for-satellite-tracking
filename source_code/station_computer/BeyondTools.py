@@ -17,15 +17,15 @@ from math import degrees                                            # conversion
 
 class BeyondTools:
     def __init__(self, conf):
-        self.tle_file = conf['tle_file']                        # text file with TLE data
-        self.station_latitude = conf['station_latitude']        # station latitude
-        self.station_longitude = conf['station_longitude']      # station longitude
-        self.station_altitude = conf['station_altitude']        # station altitude
-        self.min_max_elevation = conf['min_max']                # minimal MAX elevation of a satellite pass
+        self.tle_file = conf['tle_file']                            # text file with TLE data
+        self.station_latitude = conf['station_latitude']            # station latitude
+        self.station_longitude = conf['station_longitude']          # station longitude
+        self.station_altitude = conf['station_altitude']            # station altitude
+        self.min_max_elevation = conf['min_max']                    # minimal MAX elevation of a satellite pass
         self.station = create_station('My station',(self.station_latitude, self.station_longitude, self.station_altitude))
         with open(self.tle_file, 'r') as file:
             self.satellites = sorted(list(map(str.strip, file.readlines()[::3])))
-        self.satellites_count = len(self.satellites)
+        self.satellites_count = len(self.satellites)                # list of all active satellites in orbit
 
     def get_tle(self, satellite):                                   # return TLE object for a satellite
         with open(self.tle_file, 'r') as file:                      # open TLE text file
@@ -95,3 +95,7 @@ class BeyondTools:
                 los_az = azimuth
                 if ok and ok2:
                     return times, azims, elevs, aos_time, max_time, los_time, aos_az, max_az, los_az, max_el
+                else:
+                    times.clear()
+                    azims.clear()
+                    elevs.clear()
