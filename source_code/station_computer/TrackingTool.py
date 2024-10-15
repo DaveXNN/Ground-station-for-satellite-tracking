@@ -13,13 +13,16 @@ from threading import Thread, Timer                                 # module for
 from tkinter import *                                               # tkinter package for creating GUI
 from time import sleep                                              # module with sleep() function
 
+from BeyondTools import BeyondTools                                 # module for predicting satellite visibility
+from Mqtt import Mqtt                                               # module for MQTT communication
+
 
 class TrackingTool(Tk):
-    def __init__(self, json_tool, beyond_tools, mqt, tle_updator):
+    def __init__(self, json_tool, tle_updator):
         super().__init__()
         self.json_tool = json_tool                                  # json configuration file
-        self.mqtt = mqt                                             # object for MQTT communication
-        self.beyond_tools = beyond_tools                            # object for satellite pass predictions
+        self.mqtt = Mqtt()                                          # object for MQTT communication
+        self.beyond_tools = BeyondTools(json_tool.content)          # object for satellite pass predictions
         self.tle_updator = tle_updator                              # object for updating TLE data
 
         # Load program variables from json configuration file
@@ -87,21 +90,17 @@ class TrackingTool(Tk):
 
 
         # Azimuth and elevation offsets
-        self.az_offset = Offset(self, self.az_offset_var)
-        self.el_offset = Offset(self, self.el_offset_var)
+        self.az_offset = Offset('az_offset', self, self.az_offset_var)
+        self.el_offset = Offset('el_offset', self, self.el_offset_var)
 
         # Labels definition
-        self.main_title = Label(self, text=self.program_name, font='Helvetica 20 bold', bg=self.bg_color,
-                                fg=self.text_color)
+        self.main_title = Label(self, text=self.program_name, font='Helvetica 20 bold', bg=self.bg_color, fg=self.text_color)
         self.main_title.place(relx=0.5, rely=0.05, anchor=CENTER)
-        self.left_title = Label(self, text='Predicting satellite visibility', font='Helvetica 10 bold',
-                                bg=self.bg_color, fg=self.text_color)
+        self.left_title = Label(self, text='Predicting satellite visibility', font='Helvetica 10 bold', bg=self.bg_color, fg=self.text_color)
         self.left_title.place(relx=0.25, rely=0.10, anchor=CENTER)
-        self.right_title = Label(self, text='Rotator information', font='Helvetica 10 bold', bg=self.bg_color,
-                                 fg=self.text_color)
+        self.right_title = Label(self, text='Rotator information', font='Helvetica 10 bold', bg=self.bg_color, fg=self.text_color)
         self.right_title.place(relx=0.75, rely=0.10, anchor=CENTER)
-        self.ll00 = Label(self, text='Select a satellite by double click and click Predict to predict first pass or Add'
-                                     ' to tracking to track it:', bg=self.bg_color, fg=self.text_color)
+        self.ll00 = Label(self, text='Select a satellite by double click and click Predict to predict first pass or Add to tracking to track it:', bg=self.bg_color, fg=self.text_color)
         self.ll00.place(relx=0.25, rely=0.15, anchor=CENTER)
         self.ll01 = Label(self, textvariable=self.msv0, bg=self.bg_color, fg=self.text_color)
         self.ll01.place(relx=0.125, rely=0.20, anchor=CENTER)
@@ -161,88 +160,73 @@ class TrackingTool(Tk):
         self.sat_entry1 = Entry(textvariable=self.ss1, bg=self.bg_color, fg=self.text_color)
         self.sat_entry1.place(relx=0.375, rely=0.40, relwidth=0.2, anchor=CENTER)
         self.sat_entry1.bind('<Return>', self.search1)
-        self.le0 = Entry(textvariable=self.date, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le0 = Entry(textvariable=self.date, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le0.place(relx=0.25, rely=0.55, relwidth=0.2, anchor=W)
-        self.le1 = Entry(textvariable=self.aos_time, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le1 = Entry(textvariable=self.aos_time, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le1.place(relx=0.25, rely=0.60, relwidth=0.2, anchor=W)
-        self.le2 = Entry(textvariable=self.aos_az, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le2 = Entry(textvariable=self.aos_az, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le2.place(relx=0.25, rely=0.65, relwidth=0.2, anchor=W)
-        self.le3 = Entry(textvariable=self.max_time, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le3 = Entry(textvariable=self.max_time, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le3.place(relx=0.25, rely=0.70, relwidth=0.2, anchor=W)
-        self.le4 = Entry(textvariable=self.max_az, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le4 = Entry(textvariable=self.max_az, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le4.place(relx=0.25, rely=0.75, relwidth=0.2, anchor=W)
-        self.le5 = Entry(textvariable=self.max_el, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le5 = Entry(textvariable=self.max_el, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le5.place(relx=0.25, rely=0.80, relwidth=0.2, anchor=W)
-        self.le6 = Entry(textvariable=self.los_time, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le6 = Entry(textvariable=self.los_time, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le6.place(relx=0.25, rely=0.85, relwidth=0.2, anchor=W)
-        self.le7 = Entry(textvariable=self.los_az, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le7 = Entry(textvariable=self.los_az, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le7.place(relx=0.25, rely=0.90, relwidth=0.2, anchor=W)
-        self.le8 = Entry(textvariable=self.duration, justify=RIGHT, bg=self.bg_color, fg=self.text_color)
+        self.le8 = Entry(textvariable=self.duration, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.le8.place(relx=0.25, rely=0.95, relwidth=0.2, anchor=W)
-        self.re0 = Entry(textvariable=self.utctime, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re0 = Entry(textvariable=self.utctime, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re0.place(relx=0.625, rely=0.15, relwidth=0.1, anchor=W)
-        self.re1 = Entry(textvariable=self.localtime, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re1 = Entry(textvariable=self.localtime, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re1.place(relx=0.875, rely=0.15, relwidth=0.1, anchor=W)
-        self.re2 = Entry(textvariable=self.r_az, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re2 = Entry(textvariable=self.r_az, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re2.place(relx=0.625, rely=0.20, relwidth=0.1, anchor=W)
-        self.re3 = Entry(textvariable=self.r_el, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re3 = Entry(textvariable=self.r_el, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re3.place(relx=0.875, rely=0.20, relwidth=0.1, anchor=W)
-        self.re4 = Entry(textvariable=self.az_offset_var, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re4 = Entry(textvariable=self.az_offset_var, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re4.place(relx=0.650, rely=0.25, relwidth=0.05, anchor=W)
-        self.re5 = Entry(textvariable=self.el_offset_var, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re5 = Entry(textvariable=self.el_offset_var, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re5.place(relx=0.900, rely=0.25, relwidth=0.05, anchor=W)
-        self.re6 = Entry(textvariable=self.r_satellite, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re6 = Entry(textvariable=self.r_satellite, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re6.place(relx=0.625, rely=0.30, relwidth=0.1, anchor=W)
-        self.re7 = Entry(textvariable=self.r_time_till_los, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re7 = Entry(textvariable=self.r_time_till_los, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re7.place(relx=0.875, rely=0.30, relwidth=0.1, anchor=W)
-        self.re8 = Entry(textvariable=self.r_pol, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re8 = Entry(textvariable=self.r_pol, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re8.place(relx=0.625, rely=0.35, relwidth=0.1, anchor=W)
-        self.re9 = Entry(textvariable=self.mqtt_status, justify=CENTER, bg=self.bg_color, fg=self.text_color)
+        self.re9 = Entry(textvariable=self.mqtt_status, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
         self.re9.place(relx=0.625, rely=0.40, relwidth=0.1, anchor=W)
 
         # Buttons definition
-        self.predict_button = Button(self, text='Predict', command=lambda: self.predict(self.sat_entry0.get()),
-                                     bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.predict_button = Button(self, text='Predict', command=lambda: self.predict(self.sat_entry0.get()), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.predict_button.place(relx=0.075, rely=0.45, relwidth=0.1, anchor=CENTER)
-        self.add_button = Button(self, text='Add to tracking', command=self.add_to_tracked, bg=self.bg_color,
-                                 fg=self.text_color, activebackground=self.bg_color)
+        self.add_button = Button(self, text='Add to tracking', command=self.add_to_tracked, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.add_button.place(relx=0.175, rely=0.45, relwidth=0.1, anchor=CENTER)
-        self.remove_button = Button(self, text='Remove from tracking', command=self.remove_from_tracked,
-                                    bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.remove_button = Button(self, text='Remove from tracking', command=self.remove_from_tracked, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.remove_button.place(relx=0.325, rely=0.45, relwidth=0.1, anchor=CENTER)
-        self.track_button = Button(self, text='Track', command=self.start_tracking,
-                                   bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.track_button = Button(self, text='Track', command=self.start_tracking, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.track_button.place(relx=0.425, rely=0.45, relwidth=0.1, anchor=CENTER)
-        self.ver_pol = Button(self, text='Vertical', command=lambda: self.set_polarization('Vertical'),
-                              bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.ver_pol = Button(self, text='Vertical', command=lambda: self.set_polarization('Vertical'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.ver_pol.place(relx=0.775, rely=0.35, relwidth=0.05, anchor=W)
-        self.hor_pol = Button(self, text='Horizontal', command=lambda: self.set_polarization('Horizontal'),
-                              bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.hor_pol = Button(self, text='Horizontal', command=lambda: self.set_polarization('Horizontal'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.hor_pol.place(relx=0.825, rely=0.35, relwidth=0.05, anchor=W)
-        self.lhcp_pol = Button(self, text='LHCP', command=lambda: self.set_polarization('LHCP'),
-                               bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.lhcp_pol = Button(self, text='LHCP', command=lambda: self.set_polarization('LHCP'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.lhcp_pol.place(relx=0.875, rely=0.35, relwidth=0.05, anchor=W)
-        self.rhcp_pol = Button(self, text='RHCP', command=lambda: self.set_polarization('RHCP'),
-                               bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.rhcp_pol = Button(self, text='RHCP', command=lambda: self.set_polarization('RHCP'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.rhcp_pol.place(relx=0.925, rely=0.35, relwidth=0.05, anchor=W)
-        self.shutdown_button = Button(self, text='Shut down rotator',
-                                      command=lambda: self.mqtt.publish_action('shutdown'), bg=self.bg_color,
-                                      fg=self.text_color, activebackground=self.bg_color)
+        self.shutdown_button = Button(self, text='Shut down rotator', command=lambda: self.mqtt.publish_action('shutdown'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.shutdown_button.place(relx=0.775, rely=0.40, relwidth=0.1, anchor=W)
-        self.close_button = Button(self, text='Close program', command=self.close_window,
-                                   bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.close_button = Button(self, text='Close program', command=self.close_window, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.close_button.place(relx=0.875, rely=0.40, relwidth=0.1, anchor=W)
-        self.az_inc_button = Button(self, text='+', command=self.az_increase_offset,
-                                    bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.az_inc_button = Button(self, text='+', command=self.az_offset.increase, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.az_inc_button.place(relx=0.625, rely=0.25, relwidth=0.025, anchor=W)
-        self.az_dec_button = Button(self, text='-', command=self.az_decrease_offset,
-                                    bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.az_dec_button = Button(self, text='-', command=self.az_offset.decrease, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.az_dec_button.place(relx=0.700, rely=0.25, relwidth=0.025, anchor=W)
-        self.el_inc_button = Button(self, text='+', command=self.el_increase_offset,
-                                    bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.el_inc_button = Button(self, text='+', command=self.el_offset.increase, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.el_inc_button.place(relx=0.875, rely=0.25, relwidth=0.025, anchor=W)
-        self.el_dec_button = Button(self, text='-', command=self.el_decrease_offset,
-                                    bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
+        self.el_dec_button = Button(self, text='-', command=self.el_offset.decrease, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
         self.el_dec_button.place(relx=0.950, rely=0.25, relwidth=0.025, anchor=W)
 
         # Listbox definition
@@ -313,22 +297,6 @@ class TrackingTool(Tk):
     def update_listbox2(self):
         self.fill_listbox(self.listbox2, self.tracked_satellites)
         self.msv2.set(f'Tracked satellites ({len(self.tracked_satellites)}): ')
-
-    def az_increase_offset(self):
-        self.az_offset.increase()
-        self.mqtt.publish_az_offset(f'{self.az_offset.offset}')
-
-    def az_decrease_offset(self):
-        self.az_offset.decrease()
-        self.mqtt.publish_az_offset(f'{self.az_offset.offset}')
-
-    def el_increase_offset(self):
-        self.el_offset.increase()
-        self.mqtt.publish_el_offset(f'{self.el_offset.offset}')
-
-    def el_decrease_offset(self):
-        self.el_offset.decrease()
-        self.mqtt.publish_el_offset(f'{self.el_offset.offset}')
 
     def set_polarization(self, pol):                                # sets antenna polarization
         self.r_pol.set(pol)
@@ -481,7 +449,8 @@ class TrackingTool(Tk):
 
 
 class Offset:
-    def __init__(self, app, string_var):
+    def __init__(self, topic_name, app, string_var):
+        self.topic_name = topic_name
         self.string_var = string_var
         self.offset = 0.0
         self.offset_step = 0.2
@@ -489,27 +458,28 @@ class Offset:
         self.publish()
 
     def increase(self):
-        if not self.app.tracking:
+        if not self.app.tracking and self.app.mqtt.connected:
             self.offset += self.offset_step
             self.publish()
 
     def decrease(self):
-        if not self.app.tracking:
+        if not self.app.tracking and self.app.mqtt.connected:
             self.offset -= self.offset_step
             self.publish()
 
     def publish(self):
         self.offset = round(self.offset, 2)
         self.string_var.set(f'{self.offset}')
+        self.app.mqtt.publish_offset(self.topic_name, self.offset)
 
 
 class TrackedSatellite:
     def __init__(self, app, name):
         self.name = name                                            # satellite name
         self.times, self.azims, self.elevs = [], [], []             # list of azims and elevs in time during the pass
-        self.aos_time = datetime.now(timezone.utc)                              # AOS time of the first pass
-        self.max_time = datetime.now(timezone.utc)                              # MAX time of the first pass
-        self.los_time = datetime.now(timezone.utc)                              # LOS time of the first pass
+        self.aos_time = None                                        # AOS time of the first pass
+        self.max_time = None                                        # MAX time of the first pass
+        self.los_time = None                                        # LOS time of the first pass
         self.aos_az = 0                                             # AOS azimuth
         self.max_az = 0                                             # MAX azimuth
         self.los_az = 0                                             # LOS azimuth
@@ -523,7 +493,7 @@ class TrackedSatellite:
     def print_info(self, msg):                                      # print info with satellite name and timestamp
         print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {self.name} {msg}')
 
-    def create_data(self, init_delay=0):                                          # create data about the first pass of satellite
+    def create_data(self, init_delay=0):                            # create data about the first pass of satellite
         self.times.clear()                                          # clear the previous data
         self.azims.clear()
         self.elevs.clear()
