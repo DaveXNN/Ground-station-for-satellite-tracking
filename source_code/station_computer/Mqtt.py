@@ -8,17 +8,17 @@
 ########################################################################################################################
 
 
-import paho.mqtt.client as paho                                     # for subscribing data from MQTT broker
+import paho.mqtt.client as paho                                     # module for subscribing data from MQTT broker
 
-from datetime import datetime, timezone                             # for operations with date and time
-from socket import gaierror                                         # for avoiding connection errors
-from threading import Timer                                         # for running more processes in parallel
+from datetime import datetime, timezone                             # module for operations with date and time
+from socket import gaierror                                         # module for avoiding connection errors
+from threading import Timer                                         # module for running more processes in parallel
 
 
 class Mqtt:
     def __init__(self):
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set('laptop', password='laptop')    # mqtt server authorization
+        self.client.username_pw_set(<username>, password=<password>)# mqtt server authorization
         self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
@@ -31,7 +31,7 @@ class Mqtt:
 
     def try_connect(self):                                          # function that tries to establish a connection with MQTT broker
         try:
-            self.client.connect('raspberrypi', port=1883)
+            self.client.connect(<hostname>, port=<port>)
             self.client.on_connect = self.on_connect
             self.client.on_message = self.on_message
             self.client.subscribe('azimuth')
