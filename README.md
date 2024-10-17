@@ -74,7 +74,7 @@ NEMA23 is a high torque stepper motor with torque over 1,8 Nm and step angle 1,8
 ![](/images/spurgear_azimuth.jpg)
 ![](/images/spurgear_elevation.jpg)
 
-### Software
+### Rotator software
 Rotator receives commands via MQTT client and then moves stepper motors or changes antenna polarization. It's programmed in Python 3.9 and you can find the source code in [this repository](/source_code/rotator).
 
 To install MQTT broker on Raspberry Pi I used a command ```sudo apt install -y mosquitto mosquitto-clients```
@@ -168,7 +168,7 @@ PLANETUM1
 2 52738  97.5706  13.4568 0006175 242.8845 117.1778 15.51691004126148
 ```
 
-A text file tle_active.txt contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites. Next to the All satellites listbox there is another listbox called Selected satellites, which shows all satellites selected for tracking using buttons Add to tracking and Remove from tracking. The default screen looks like this:
+A text file [tle_active.txt](/source_code/station_computer/tle_active.txt) contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites. Next to the All satellites listbox there is another listbox called Selected satellites, which shows all satellites selected for tracking using buttons Add to tracking and Remove from tracking. The default screen looks like this:
 
 ![](/images/satellite_tracking_software-default.png)
 
