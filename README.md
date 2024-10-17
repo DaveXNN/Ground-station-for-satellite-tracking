@@ -168,11 +168,11 @@ PLANETUM1
 2 52738  97.5706  13.4568 0006175 242.8845 117.1778 15.51691004126148
 ```
 
-A text file [tle_active.txt](/source_code/station_computer/tle_active.txt) contains TLE of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in listbox All satellites. Next to the All satellites listbox there is another listbox called Selected satellites, which shows all satellites selected for tracking using buttons Add to tracking and Remove from tracking. The default screen looks like this:
+A text file [tle_active.txt](/source_code/station_computer/tle_active.txt) contains TLE data of all active satellites on the Earth's orbit. The list of all these satellite is displayed in GUI on the left hand side in the listbox All satellites. Next to the All satellites listbox there is another listbox called Selected satellites, which shows all satellites selected for tracking using buttons Add to tracking and Remove from tracking. The default screen looks like this:
 
 ![](/images/satellite_tracking_software-default.png)
 
-You can select any of the satellites in All satellites listbox and predict its visibility. Information about the pass will be shown below in the table. Here is an example predict for the International Space Station (ISS):
+You can select any of the satellites in All satellites listbox and predict its visibilityusing the Predict button. Information about the pass will be shown below in the table. Here is an example predict for the International Space Station (ISS):
 
 ![](/images/satellite_tracking_software-predicting.png)
 
