@@ -18,7 +18,7 @@ from threading import Timer                                         # module for
 class Mqtt:                                                         # module for communicating with MQTT broker
     def __init__(self):
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set('laptop', password='laptop')    # mqtt broker authorization
+        self.client.username_pw_set(<username>, password=<password>)# mqtt broker authorization
         self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
@@ -31,7 +31,7 @@ class Mqtt:                                                         # module for
 
     def try_connect(self):                                          # try to establish a connection with MQTT broker
         try:
-            self.client.connect('raspberrypi', port=1883)
+            self.client.connect(<hostname>, port=<port>)
             self.client.on_connect = self.on_connect
             self.client.on_message = self.on_message
             self.client.subscribe('azimuth')
