@@ -1,13 +1,23 @@
-import json
+########################################################################################################################
+#                                                                                                                      #
+#    Author:         D. Nenicka                                                                                        #
+#    Created:        3. 11. 2023                                                                                       #
+#    Modified:       19. 10. 2024                                                                                      #
+#    Description:    Module for operations with json files                                                             #
+#                                                                                                                      #
+########################################################################################################################
 
 
-class JsonTools:
+import json                                                         # module for working with json files
+
+
+class JsonTools:                                                    # module for operations with json files
     def __init__(self, json_file):
-        self.configuration_file = json_file
-        with open(self.configuration_file) as json_file:  # open configuration file
-            self.content = json.load(json_file)  # load content of configuration file
+        self.configuration_file = json_file                         # configuration file path
+        with open(self.configuration_file) as json_file:            # open configuration file
+            self.content = json.load(json_file)                     # load content from configuration file
 
-    def overwrite_variable(self, variable, value):
+    def overwrite_variable(self, variable, value):                  # overwrite a variable in json configuration file
         self.content[variable] = value
         with open(self.configuration_file, 'w') as h:
             json_string = json.dumps(self.content, indent=4)

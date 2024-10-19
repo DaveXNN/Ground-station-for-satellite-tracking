@@ -2,7 +2,7 @@
 #                                                                                                                      #
 #    Author:         D. Nenicka                                                                                        #
 #    Created:        3. 11. 2023                                                                                       #
-#    Modified:       30. 8. 2024                                                                                       #
+#    Modified:       19. 10. 2024                                                                                      #
 #    Description:    Module for predicting satellite visibility                                                        #
 #                                                                                                                      #
 ########################################################################################################################
@@ -15,7 +15,7 @@ from datetime import datetime, timedelta                            # module for
 from math import degrees                                            # conversion from radians to degrees
 
 
-class BeyondTools:
+class BeyondTools:                                                  # module for predicting satellite visibility
     def __init__(self, conf):
         self.tle_file = conf['tle_file']                            # text file with TLE data
         self.station_latitude = conf['station_latitude']            # station latitude
@@ -27,15 +27,19 @@ class BeyondTools:
             self.satellites = sorted(list(map(str.strip, file.readlines()[::3])))
         self.satellites_count = len(self.satellites)                # list of all active satellites in orbit
 
+    @staticmethod
+    def dt_set_utc_timezone(dt):                                    # return datetime format with UTC timezone
+        return datetime.strptime(''.join([str(dt)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
+
     def get_tle(self, satellite):                                   # return TLE object for a satellite
-        with open(self.tle_file, 'r') as file:                      # open TLE text file
+        with open(self.tle_file, 'r') as file:
             lines = file.readlines()
             for line in lines:
                 if satellite in line:
                     line_number = lines.index(line)
                     return Tle(lines[line_number + 1] + lines[line_number + 2])
 
-    def predict_first_pass(self, satellite):
+    def predict_first_pass(self, satellite):                        # return data about the first pass of a satellite
         aos_time = None
         max_time = None
         aos_az = 0
@@ -45,20 +49,20 @@ class BeyondTools:
         tle = self.get_tle(satellite)
         for orb in self.station.visibility(tle.orbit(), start=Date.now(), stop=timedelta(days=7), step=timedelta(seconds=50), events=True):
             if orb.event and orb.event.info.startswith('AOS'):
-                aos_time = datetime.strptime(''.join([str(orb.date)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
+                aos_time = self.dt_set_utc_timezone(orb.date)
                 aos_az = degrees(-orb.theta) % 360
                 ok = True
             if orb.event and orb.event.info.startswith('MAX'):
-                max_time = datetime.strptime(''.join([str(orb.date)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
+                max_time = self.dt_set_utc_timezone(orb.date)
                 max_az = degrees(-orb.theta) % 360
                 max_el = degrees(orb.phi)
             if orb.event and orb.event.info.startswith('LOS'):
-                los_time = datetime.strptime(''.join([str(orb.date)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
+                los_time = self.dt_set_utc_timezone(orb.date)
                 los_az = degrees(-orb.theta) % 360
                 if ok:
                     return aos_time, max_time, los_time, aos_az, max_az, los_az, max_el
 
-    def create_data(self, satellite, init_delay=0):
+    def create_data(self, satellite, init_delay=0):                 # create data for satellite tracking
         aos_time = None
         max_time = None
         aos_az = 0
@@ -71,7 +75,7 @@ class BeyondTools:
         ok2 = False
         tle = self.get_tle(satellite)
         for orb in self.station.visibility(tle.orbit(), start=Date.now() + timedelta(hours=init_delay), stop=timedelta(days=7), step=timedelta(seconds=10), events=True):
-            orb_date = datetime.strptime(''.join([str(orb.date)[:-4], '+00:00']), '%Y-%m-%dT%H:%M:%S.%f%z')
+            orb_date = self.dt_set_utc_timezone(orb.date)
             azimuth = degrees(-orb.theta) % 360
             elevation = degrees(orb.phi)
             times.append(orb_date)

@@ -2,7 +2,7 @@
 #                                                                                                                      #
 #    Author:         D. Nenicka                                                                                        #
 #    Created:        3. 11. 2023                                                                                       #
-#    Modified:       30. 8. 2024                                                                                       #
+#    Modified:       19. 10. 2024                                                                                      #
 #    Description:    Module for downloading TLE data                                                                   #
 #                                                                                                                      #
 ########################################################################################################################
@@ -14,13 +14,13 @@ from threading import Timer                                         # module for
 import requests                                                     # module for downloading
 
 
-class TleUpdator:
+class TleUpdator:                                                   # module for downloading TLE data
     def __init__(self, conf):
         self.json_tool = conf
-        self.tle_file = conf.content['tle_file']                        # text file with TLE data
-        self.tle_source = conf.content['tle_source']                    # source of TLE data
-        self.last_update = datetime.strptime(conf.content['last_tle_update'], '%Y-%m-%d %H:%M:%S.%f%z')  # TLE update
-        self.update_period = timedelta(hours=conf.content['tle_update_period'])     # TLE data update period
+        self.tle_file = conf.content['tle_file']                    # text file with TLE data
+        self.tle_source = conf.content['tle_source']                # source of TLE data
+        self.last_update = datetime.strptime(conf.content['last_tle_update'], '%Y-%m-%d %H:%M:%S.%f%z')  # time of the last TLE update
+        self.update_period = timedelta(hours=conf.content['tle_update_period'])                                 # TLE data update period
         update_time = datetime.now(timezone.utc) - self.last_update
         if update_time > self.update_period:
             self.update_tle()
@@ -28,7 +28,7 @@ class TleUpdator:
             self.update_thread = Timer(update_time.total_seconds(), self.update_tle)
             self.update_thread.start()
 
-    def update_tle(self):                                           # update tle data (if it is older than 2 hours)
+    def update_tle(self):                                           # update tle data (when the current version is older than 2 hours)
         try:
             response = requests.get(self.tle_source)
             if response.ok:

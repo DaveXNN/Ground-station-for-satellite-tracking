@@ -2,7 +2,7 @@
 #                                                                                                                      #
 #    Author:         D. Nenicka                                                                                        #
 #    Created:        3. 11. 2023                                                                                       #
-#    Modified:       30. 8. 2024                                                                                       #
+#    Modified:       19. 10. 2024                                                                                      #
 #    Description:    Simple GUI for satellite tracking                                                                 #
 #                                                                                                                      #
 ########################################################################################################################
@@ -18,11 +18,11 @@ from BeyondTools import BeyondTools                                 # module for
 from Mqtt import Mqtt                                               # module for MQTT communication
 
 
-class TrackingTool(Tk):
+class TrackingTool(Tk):                                             # GUI for satellite tracking
     def __init__(self, json_tool, tle_updator):
         super().__init__()
 
-        # Initialize basic modules
+        # Initialize modules
         self.json_tool = json_tool                                  # module for working with json configuration file
         self.mqtt = Mqtt()                                          # module for MQTT communication
         self.beyond_tools = BeyondTools(json_tool.content)          # module for satellite pass predictions
@@ -81,8 +81,8 @@ class TrackingTool(Tk):
         self.tle_info = StringVar()                                 # information about time of the last TLE update
 
         # Azimuth and elevation offsets
-        self.az_offset = Offset('az_offset', self, self.az_offset_var)      # azimuth offset object
-        self.el_offset = Offset('el_offset', self, self.el_offset_var)      # elevation offset object
+        self.az_offset = Offset(self,'az_offset', self.az_offset_var)      # azimuth offset object
+        self.el_offset = Offset(self,'el_offset', self.el_offset_var)      # elevation offset object
 
         # Listbox definition
         self.listbox0 = MyListbox(self, self.listbox_title0, 'All satellites', self.beyond_tools.satellites, 0.125, 0.3, 0.2, 0.15)
@@ -239,23 +239,45 @@ class TrackingTool(Tk):
         self.tracking_thread = None                                 # thread for starting satellite tracking
 
     @staticmethod
-    def fill_listbox(listbox, title_var, content, title):           # fill listbox with content
-        listbox.delete(0, END)
-        for item in content:
-            listbox.insert(END, item)
-        title_var.set(''.join([title, '(', len(content), '):']))
-
-    @staticmethod
     def timedelta_formatter(td):                                    # function that returns timedelta object in string format %H %M %S
         hours, remainder = divmod(td.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
 
+    def add_to_tracked(self):                                       # add satellite to tracked satellite list
+        sat = self.sat_entry0.get()
+        if sat in self.beyond_tools.satellites and sat not in self.selected_satellites:
+            self.selected_satellites.append(sat)
+            self.selected_satellites = sorted(self.selected_satellites)
+        self.listbox1.fill(self.selected_satellites)
+        self.ss0.set('')
+
+    def remove_from_tracked(self):                                  # remove satellite from tracked satellites list
+        sat = self.sat_entry1.get()
+        if sat in self.selected_satellites:
+            self.selected_satellites.remove(sat)
+        self.listbox1.fill(self.selected_satellites)
+        self.ss1.set('')
+
     def start_tracking(self):                                       # start satellite tracking
         self.tracking_thread = Thread(target=self.track_satellites, daemon=True)
         self.tracking_thread.start()
 
-    def update_r_info(self):                                        # display rotator information
+    def track_satellites(self):                                     # track all satellites in track_satellites list
+        if not self.track_button_pressed:
+            self.track_button_pressed = True
+            self.tracked_satellites = self.selected_satellites
+            self.listbox2.fill(self.tracked_satellites)
+            self.json_tool.overwrite_variable('tracked_satellites', self.tracked_satellites)
+            self.tso = [TrackedSatellite(self, sat) for sat in self.tracked_satellites]
+            self.find_first_pass()
+            self.predict(self.next_satellite)
+
+    def set_polarization(self, pol):                                # remotely set antenna polarization
+        self.r_pol.set(pol)
+        self.mqtt.publish_polarization(pol)
+
+    def update_r_info(self):                                        # display rotator information every 1 second
         self.utctime.set(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.r_az.set(self.mqtt.az)
@@ -277,35 +299,50 @@ class TrackingTool(Tk):
             self.mqtt_status.set('disconnected')
         self.after(1000, self.update_r_info)
 
-    def set_polarization(self, pol):                                # sets antenna polarization
-        self.r_pol.set(pol)
-        self.mqtt.publish_polarization(pol)
+    def predict(self, sat):                                         # create data about the first pass of selected satellite
+        if sat == '':
+            return
+        if sat in self.beyond_tools.satellites:
+            if sat in self.tracked_satellites:
+                for x in self.tso:
+                    if x.name == sat:
+                        self.show_prediction(x.name, x.aos_time, x.max_time, x.los_time, x.aos_az, x.max_az, x.los_az, x.max_el)
+                        break
+            else:
+                aos_time, max_time, los_time, aos_az, max_az, los_az, max_el = self.beyond_tools.predict_first_pass(sat)
+                try:
+                    self.show_prediction(sat, aos_time, max_time, los_time, aos_az, max_az, los_az, max_el)
+                except NameError:
+                    self.prediction_title.set(f'Sorry, could not predict {sat}.')
+                    self.empty_prediction()
+        else:
+            self.prediction_title.set(f'Sorry, {sat} is not a satellite in orbit.')
 
-    def add_to_tracked(self):                                       # add satellite to tracking
-        sat = self.sat_entry0.get()
-        if sat in self.beyond_tools.satellites and sat not in self.selected_satellites:
-            self.selected_satellites.append(sat)
-            self.selected_satellites = sorted(self.selected_satellites)
-        self.listbox1.fill(self.selected_satellites)
-        self.ss0.set('')
+    def show_prediction(self, sat, aos_time, max_time, los_time, aos_az, max_az, los_az, max_el):   # display satellite prediction data
+        self.prediction_title.set(f'First pass prediction for {sat}: ')
+        self.date.set(aos_time.strftime('%d %B %Y'))
+        self.aos_time.set(aos_time.strftime('%H:%M:%S'))
+        self.aos_az.set(f'{aos_az:.2f}')
+        self.max_time.set(max_time.strftime('%H:%M:%S'))
+        self.max_az.set(f'{max_az:.2f}')
+        self.max_el.set(f'{max_el:.2f}')
+        self.los_time.set(los_time.strftime('%H:%M:%S'))
+        self.los_az.set(f'{los_az:.2f}')
+        self.duration.set(self.timedelta_formatter(los_time - aos_time))
 
-    def remove_from_tracked(self):                                  # remove satellite from tracking
-        sat = self.sat_entry1.get()
-        if sat in self.selected_satellites:
-            self.selected_satellites.remove(sat)
-        self.listbox1.fill(self.selected_satellites)
-        self.ss1.set('')
+    def empty_prediction(self):                                     # clear satellite prediction data
+        self.prediction_title.set('First pass prediction')
+        self.date.set('')
+        self.aos_time.set('')
+        self.aos_az.set('')
+        self.max_time.set('')
+        self.max_az.set('')
+        self.max_el.set('')
+        self.los_time.set('')
+        self.los_az.set('')
+        self.duration.set('')
 
-    def track_satellites(self):                                     # track all satellites in track_satellites list
-        if not self.track_button_pressed:
-            self.track_button_pressed = True
-            self.tracked_satellites = self.selected_satellites
-            self.listbox2.fill(self.tracked_satellites)
-            self.json_tool.overwrite_variable('tracked_satellites', self.tracked_satellites)
-            self.tso = [TrackedSatellite(self, sat) for sat in self.tracked_satellites]
-            self.find_first_pass()
-
-    def find_first_pass(self):
+    def find_first_pass(self):                                      # find the first satellite in tracked satellites that will appear above the horizont
         if len(self.tso) == 0:
             return
         if len(self.tso) == 1:
@@ -326,55 +363,16 @@ class TrackingTool(Tk):
             self.next_satellite = first_sat
         self.next_pass_info.set(f'Next pass: {self.next_satellite}, AOS: {self.first_pass_time.strftime('%d %B %Y %H:%M:%S UTC')}')
 
-    def predict(self, sat):                                         # create data about the first pass of selected satellite
-        if sat == '':
-            return
-        if sat in self.beyond_tools.satellites:
-            if sat in self.tracked_satellites:
-                for x in self.tso:
-                    if x.name == sat:
-                        self.show_prediction(x.name, x.aos_time, x.max_time, x.los_time, x.aos_az, x.max_az, x.los_az, x.max_el)
-                        break
-            else:
-                aos_time, max_time, los_time, aos_az, max_az, los_az, max_el = self.beyond_tools.predict_first_pass(sat)
-                try:
-                    self.show_prediction(sat, aos_time, max_time, los_time, aos_az, max_az, los_az, max_el)
-                except NameError:
-                    self.prediction_title.set(f'Sorry, could not predict {sat}.')
-                    self.empty_prediction()
-        else:
-            self.prediction_title.set(f'Sorry, {sat} is not a satellite in orbit.')
-
-    def show_prediction(self, sat, aos_time, max_time, los_time, aos_az, max_az, los_az, max_el):
-        self.prediction_title.set(f'First pass prediction for {sat}: ')
-        self.date.set(aos_time.strftime('%d %B %Y'))
-        self.aos_time.set(aos_time.strftime('%H:%M:%S'))
-        self.aos_az.set(f'{aos_az:.2f}')
-        self.max_time.set(max_time.strftime('%H:%M:%S'))
-        self.max_az.set(f'{max_az:.2f}')
-        self.max_el.set(f'{max_el:.2f}')
-        self.los_time.set(los_time.strftime('%H:%M:%S'))
-        self.los_az.set(f'{los_az:.2f}')
-        self.duration.set(self.timedelta_formatter(los_time - aos_time))
-
-    def empty_prediction(self):
-        self.prediction_title.set('First pass prediction')
-        self.date.set('')
-        self.aos_time.set('')
-        self.aos_az.set('')
-        self.max_time.set('')
-        self.max_az.set('')
-        self.max_el.set('')
-        self.los_time.set('')
-        self.los_az.set('')
-        self.duration.set('')
-
-    def shutdown_rotator(self):
-        if messagebox.askokcancel(title='Information', message='Are you sure to shut down the rotator?'):
+    def shutdown_rotator(self):                                     # remotely shut down the rotator
+        if self.tracking:
+            messagebox.showinfo(title='Information', message='You cannot shut down the rotator while tracking.')
+        elif messagebox.askokcancel(title='Information', message='Are you sure to shut down the rotator?'):
             self.mqtt.publish_action('shutdown')
 
-    def close_window(self):
-        if (not self.tracking or not self.mqtt.connected) and messagebox.askokcancel(title='Information', message=f'Are you sure to quit {self.program_name}?'):
+    def close_window(self):                                         # close Satellite Tracking Software
+        if self.tracking:
+            messagebox.showinfo(title='Information', message=f'You cannot close {self.program_name} while tracking.')
+        elif messagebox.askokcancel(title='Information', message=f'Are you sure to quit {self.program_name}?'):
             try:
                 self.mqtt.connect_thread.cancel()
             except AttributeError:
@@ -390,72 +388,71 @@ class TrackingTool(Tk):
                 except AttributeError:
                     pass
             self.destroy()
-        if self.tracking:
-            messagebox.showinfo(title='Information', message=f'You cannot close {self.program_name} while tracking.')
 
 
-class MyListbox(Listbox):
+class MyListbox(Listbox):                                           # object for working with listboxes
     def __init__(self, app, title_var, title, content, rel_x, rel_y, width: float, height: float):
         super().__init__(app, bg=app.bg_color, fg=app.text_color, borderwidth=0, highlightbackground='black')
         self.place(relx=rel_x, rely=rel_y, relwidth=width, relheight=height, anchor=CENTER)
-        self.bind('<Double-1>', self.go)
+        self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
         self.app = app
-        self.title_var = title_var
-        self.title = title
-        self.content = content
-        self.fill(content)
+        self.title_var = title_var                                  # variable for listbox title
+        self.title = title                                          # listbox title
+        self.content = content                                      # listbox content
+        self.fill(content)                                          # fill listbox with the content
 
-    def fill(self, content):                                        # fill listbox with content
-        content = sorted(content)
+    def fill(self, content, overwrite=True):                        # fill listbox with content
+        if overwrite:
+            self.content = content
         self.delete(0, END)
         for item in content:
             self.insert(END, item)
         self.title_var.set(''.join([self.title, ' (', str(len(content)), '):']))
 
-    def go(self, event):
+    def select(self, event):                                        # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
         cs = self.get(self.curselection())
         self.app.ss0.set(cs)
         self.app.ss1.set(cs)
 
-    def search(self, event, word):                                  # fill listbox with filtered satellite names
+    def search(self, event, word):                                  # fill listbox with filtered satellite names you search
         word = word.upper()
         self.delete(0, END)
         if word == '':
-            self.fill(self.content)
+            self.fill(self.content, overwrite=False)
             return
         filtered_data = list()
         for item in self.content:
             if item.find(word) >= 0:
                 filtered_data.append(item)
-        self.fill(filtered_data)
+        self.fill(filtered_data, overwrite=False)
 
 
-class Offset:
-    def __init__(self, topic_name, app, string_var):
-        self.topic_name = topic_name
-        self.string_var = string_var
-        self.offset = 0.0
-        self.offset_step = 0.2
+class Offset:                                                       # object to control azimuth and elevation offset
+    def __init__(self, app, topic_name, string_var):
         self.app = app
+        self.topic_name = topic_name                                # MQTT topic name
+        self.string_var = string_var                                # variable to display offset value
+        self.offset = 0.0                                           # offset value
+        self.offset_step = 0.2                                      # step of changing the offset
         self.publish()
 
-    def increase(self):
+    def increase(self):                                             # increase offset by one step
         if not self.app.tracking and self.app.mqtt.connected:
             self.offset += self.offset_step
             self.publish()
 
-    def decrease(self):
+    def decrease(self):                                             # decrease offset by one step
         if not self.app.tracking and self.app.mqtt.connected:
             self.offset -= self.offset_step
             self.publish()
 
-    def publish(self):
+    def publish(self):                                              # display and publish offset via MQTT broker
         self.offset = round(self.offset, 2)
         self.string_var.set(f'{self.offset}')
         self.app.mqtt.publish_offset(self.topic_name, self.offset)
 
 
-class TrackedSatellite:
+class TrackedSatellite:                                             # object for tracked satellites
     def __init__(self, app, name):
         self.name = name                                            # satellite name
         self.times, self.azims, self.elevs = [], [], []             # list of azims and elevs in time during the pass
@@ -472,11 +469,11 @@ class TrackedSatellite:
         self.tracking_thread = None
         self.create_data()
 
-    def print_info(self, msg):                                      # print info with satellite name and timestamp
+    def print_info(self, msg):                                      # print message with satellite name, timestamp
         print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {self.name} {msg}')
 
     def create_data(self, init_delay=0):                            # create data about the first pass of satellite
-        self.times.clear()                                          # clear the previous data
+        self.times.clear()
         self.azims.clear()
         self.elevs.clear()
         (self.times, self.azims, self.elevs, self.aos_time, self.max_time, self.los_time, self.aos_az, self.max_az,
@@ -487,36 +484,39 @@ class TrackedSatellite:
         self.app.find_first_pass()
         self.print_info(f'created data, AOS: {self.aos_time.strftime("%Y-%m-%d %H:%M:%S UTC")}, MAX elevation: {self.max_el}')
 
-    def track(self):                                                # track the satellite when crossing the sky
-        if not self.app.tracking:                                        # if any other satellite is not tracked right now
-            if self.aos_time > datetime.now(timezone.utc):
-                self.app.tracking = True
-                self.app.tracked_satellite = self.name
-                self.app.ts_los_time = self.los_time
-                self.app.mqtt.publish_action('start')
-                self.app.find_first_pass()
-                self.app.predict(self.name)
-                wait_time = (self.aos_time - datetime.now(timezone.utc)).total_seconds()
-                self.print_info(f'will fly over your head in {int(wait_time)} seconds')
-                self.app.mqtt.publish_start_azimuth(self.aos_az)
-                sleep(wait_time)
-                self.print_info('tracking started')
-                for x in range(len(self.times) - 1):
-                    delta_t = (self.times[x + 1] - self.times[x]).total_seconds()
-                    delta_az = self.azims[x + 1] - self.azims[x]
-                    delta_el = self.elevs[x + 1] - self.elevs[x]
-                    if delta_az > 180:
-                        delta_az -= 360
-                    if delta_az < -180:
-                        delta_az += 360
-                    self.app.mqtt.publish_data(delta_t, delta_az, delta_el)
-                    sleep(delta_t)
-                self.app.mqtt.publish_action('stop')
-                self.print_info('tracking ended')
-                self.app.tracking = False
-                self.app.predict(self.app.next_satellite)
+    def track(self):                                                # track the satellite
+        if self.app.mqtt.connected:
+            if not self.app.tracking:
+                if self.aos_time > datetime.now(timezone.utc):
+                    self.app.tracking = True
+                    self.app.tracked_satellite = self.name
+                    self.app.ts_los_time = self.los_time
+                    self.app.mqtt.publish_action('start')
+                    self.app.find_first_pass()
+                    self.app.predict(self.name)
+                    wait_time = (self.aos_time - datetime.now(timezone.utc)).total_seconds()
+                    self.print_info(f'will fly over your head in {int(wait_time)} seconds')
+                    self.app.mqtt.publish_aos_azimuth(self.aos_az)
+                    sleep(wait_time)
+                    self.print_info('tracking started')
+                    for x in range(len(self.times) - 1):
+                        delta_t = (self.times[x + 1] - self.times[x]).total_seconds()
+                        delta_az = self.azims[x + 1] - self.azims[x]
+                        delta_el = self.elevs[x + 1] - self.elevs[x]
+                        if delta_az > 180:
+                            delta_az -= 360
+                        if delta_az < -180:
+                            delta_az += 360
+                        self.app.mqtt.publish_data(delta_t, delta_az, delta_el)
+                        sleep(delta_t)
+                    self.app.mqtt.publish_action('stop')
+                    self.print_info('tracking ended')
+                    self.app.tracking = False
+                    self.app.predict(self.app.next_satellite)
+                else:
+                    self.print_info('tracking passed')
             else:
-                self.print_info('tracking passed')
+                self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite} is being tracked')
         else:
-            self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite} is being tracked')
+            self.print_info(f'cannot be tracked now, because rotator is not connected')
         self.create_data(init_delay=1)
