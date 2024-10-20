@@ -235,7 +235,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.tle_info.set(f'Last TLE update: {self.tle_updator.last_update.strftime("%d %B %Y %H:%M:%S UTC")}')
 
         # run basic functions
-        self.update_r_info()                                        # update rotator information every 1 second
+        self.update_rotator_info()                                        # update rotator information every 1 second
         self.tracking_thread = None                                 # thread for starting satellite tracking
 
     @staticmethod
@@ -277,7 +277,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.r_pol.set(pol)
         self.mqtt.publish_polarization(pol)
 
-    def update_r_info(self):                                        # display rotator information every 1 second
+    def update_rotator_info(self):                                        # display rotator information every 1 second
         self.utctime.set(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.r_az.set(self.mqtt.az)
@@ -297,7 +297,7 @@ class TrackingTool(Tk):                                             # GUI for sa
             self.mqtt_status.set('connected')
         else:
             self.mqtt_status.set('disconnected')
-        self.after(1000, self.update_r_info)
+        self.after(1000, self.update_rotator_info)
 
     def predict(self, sat):                                         # create data about the first pass of selected satellite
         if sat == '':
@@ -455,7 +455,7 @@ class Offset:                                                       # object to 
 class TrackedSatellite:                                             # object for tracked satellites
     def __init__(self, app, name):
         self.name = name                                            # satellite name
-        self.times, self.azims, self.elevs = [], [], []             # list of azims and elevs in time during the pass
+        self.tracking_data = []                                     # list of azims and elevs in time during the pass
         self.aos_time = None                                        # AOS time of the first pass
         self.max_time = None                                        # MAX time of the first pass
         self.los_time = None                                        # LOS time of the first pass
@@ -473,11 +473,17 @@ class TrackedSatellite:                                             # object for
         print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {self.name} {msg}')
 
     def create_data(self, init_delay=0):                            # create data about the first pass of satellite
-        self.times.clear()
-        self.azims.clear()
-        self.elevs.clear()
-        (self.times, self.azims, self.elevs, self.aos_time, self.max_time, self.los_time, self.aos_az, self.max_az,
-         self.los_az, self.max_el) = self.app.beyond_tools.create_data(self.name, init_delay=init_delay)
+        self.tracking_data.clear()
+        self.tracking_data = self.app.beyond_tools.create_data(self.name, init_delay=init_delay)
+        length = len(self.tracking_data[0]) - 1
+        self.aos_time = self.tracking_data[0][0]
+        self.los_time = self.tracking_data[0][length]
+        self.aos_az = self.tracking_data[1][0]
+        self.los_az = self.tracking_data[1][length]
+        self.max_el = max(self.tracking_data[2])
+        max_index = self.tracking_data[2].index(self.max_el)
+        self.max_time = self.tracking_data[0][max_index]
+        self.max_az = self.tracking_data[1][max_index]
         self.start_time_seconds = (self.aos_time - datetime.now(timezone.utc) - self.delay_before_tracking).seconds
         self.tracking_thread = Timer(self.start_time_seconds, self.track)
         self.tracking_thread.start()
@@ -499,10 +505,10 @@ class TrackedSatellite:                                             # object for
                     self.app.mqtt.publish_aos_azimuth(self.aos_az)
                     sleep(wait_time)
                     self.print_info('tracking started')
-                    for x in range(len(self.times) - 1):
-                        delta_t = (self.times[x + 1] - self.times[x]).total_seconds()
-                        delta_az = self.azims[x + 1] - self.azims[x]
-                        delta_el = self.elevs[x + 1] - self.elevs[x]
+                    for x in range(len(self.tracking_data[0]) - 1):
+                        delta_t = (self.tracking_data[0][x + 1] - self.tracking_data[0][x]).total_seconds()
+                        delta_az = self.tracking_data[1][x + 1] - self.tracking_data[1][x]
+                        delta_el = self.tracking_data[2][x + 1] - self.tracking_data[2][x]
                         if delta_az > 180:
                             delta_az -= 360
                         if delta_az < -180:
@@ -515,8 +521,11 @@ class TrackedSatellite:                                             # object for
                     self.app.predict(self.app.next_satellite)
                 else:
                     self.print_info('tracking passed')
+                    self.create_data(init_delay=1)
             else:
                 self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite} is being tracked')
+                self.create_data(init_delay=1)
         else:
             self.print_info(f'cannot be tracked now, because rotator is not connected')
-        self.create_data(init_delay=1)
+            self.create_data(init_delay=1)
+            self.app.predict(self.app.next_satellite)

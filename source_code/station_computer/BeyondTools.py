@@ -63,14 +63,7 @@ class BeyondTools:                                                  # module for
                     return aos_time, max_time, los_time, aos_az, max_az, los_az, max_el
 
     def create_data(self, satellite, init_delay=0):                 # create data for satellite tracking
-        aos_time = None
-        max_time = None
-        aos_az = 0
-        max_az = 0
-        max_el = 0
-        times = []
-        azims = []
-        elevs = []
+        data = [[], [], []]
         ok = False
         ok2 = False
         tle = self.get_tle(satellite)
@@ -78,28 +71,19 @@ class BeyondTools:                                                  # module for
             orb_date = self.dt_set_utc_timezone(orb.date)
             azimuth = degrees(-orb.theta) % 360
             elevation = degrees(orb.phi)
-            times.append(orb_date)
-            azims.append(azimuth)
-            elevs.append(elevation)
+            data[0].append(orb_date)
+            data[1].append(azimuth)
+            data[2].append(elevation)
             if orb.event and orb.event.info.startswith('AOS'):
-                aos_time = orb_date
-                aos_az = azimuth
                 ok = True
             if orb.event and orb.event.info.startswith('MAX'):
-                max_time = orb_date
-                max_az = azimuth
-                max_el = elevation
-                if max_el > self.min_max_elevation:
+                if elevation > self.min_max_elevation:
                     ok2 = True
                 else:
                     ok = False
                     ok2 = False
             if orb.event and orb.event.info.startswith('LOS'):
-                los_time = orb_date
-                los_az = azimuth
                 if ok and ok2:
-                    return times, azims, elevs, aos_time, max_time, los_time, aos_az, max_az, los_az, max_el
+                    return data
                 else:
-                    times.clear()
-                    azims.clear()
-                    elevs.clear()
+                    data = [[], [], []]
