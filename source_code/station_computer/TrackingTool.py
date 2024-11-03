@@ -227,15 +227,11 @@ class TrackingTool(Tk):                                             # GUI for sa
 
         # Set text of some of the string variables
         self.prediction_title.set('First pass prediction:')
-        self.r_sat_title.set('Next satellite:')
-        self.r_time_title.set('Tracking starts in:')
-        self.r_satellite.set(self.next_satellite)
-        self.r_time_till_los.set('')
         self.r_pol.set('Vertical')
         self.tle_info.set(f'Last TLE update: {self.tle_updator.last_update.strftime("%d %B %Y %H:%M:%S UTC")}')
 
         # run basic functions
-        self.update_rotator_info()                                        # update rotator information every 1 second
+        self.update_rotator_info()                                  # display rotator information every 1 second
         self.tracking_thread = None                                 # thread for starting satellite tracking
 
     @staticmethod
@@ -277,7 +273,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.r_pol.set(pol)
         self.mqtt.publish_polarization(pol)
 
-    def update_rotator_info(self):                                        # display rotator information every 1 second
+    def update_rotator_info(self):                                  # display rotator information every 1 second
         self.utctime.set(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.r_az.set(self.mqtt.az)

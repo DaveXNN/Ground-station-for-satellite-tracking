@@ -13,8 +13,12 @@ from TleUpdator import TleUpdator                                   # module for
 from TrackingTool import TrackingTool                               # Satellite Tracking Software GUI
 
 
-if __name__ == '__main__':
+def main():
     json_tool = JsonTools('configuration.json')                     # module for working with json configuration file
     tle_updator = TleUpdator(json_tool)                             # module for regular TLE data updating
     app = TrackingTool(json_tool, tle_updator)                      # GUI initialization
     app.mainloop()
+
+
+if __name__ == '__main__':
+    main()
