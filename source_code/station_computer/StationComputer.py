@@ -16,8 +16,7 @@ from TrackingTool import TrackingTool                               # Satellite 
 def main():
     json_tool = JsonTools('configuration.json')                     # module for working with json configuration file
     tle_updator = TleUpdator(json_tool)                             # module for regular TLE data updating
-    app = TrackingTool(json_tool, tle_updator)                      # GUI initialization
-    app.mainloop()
+    TrackingTool(json_tool, tle_updator)                            # GUI initialization
 
 
 if __name__ == '__main__':

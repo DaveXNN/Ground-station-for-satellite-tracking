@@ -233,6 +233,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         # run basic functions
         self.update_rotator_info()                                  # display rotator information every 1 second
         self.tracking_thread = None                                 # thread for starting satellite tracking
+        self.mainloop()
 
     @staticmethod
     def timedelta_formatter(td):                                    # function that returns timedelta object in string format %H %M %S
@@ -360,10 +361,11 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.next_pass_info.set(f'Next pass: {self.next_satellite}, AOS: {self.first_pass_time.strftime('%d %B %Y %H:%M:%S UTC')}')
 
     def shutdown_rotator(self):                                     # remotely shut down the rotator
-        if self.tracking:
-            messagebox.showinfo(title='Information', message='You cannot shut down the rotator while tracking.')
-        elif messagebox.askokcancel(title='Information', message='Are you sure to shut down the rotator?'):
-            self.mqtt.publish_action('shutdown')
+        if self.mqtt.connected:
+            if self.tracking:
+                messagebox.showinfo(title='Information', message='You cannot shut down the rotator while tracking.')
+            elif messagebox.askokcancel(title='Information', message='Are you sure to shut down the rotator?'):
+                self.mqtt.publish_action('shutdown')
 
     def close_window(self):                                         # close Satellite Tracking Software
         if self.tracking:
