@@ -12,13 +12,13 @@ import json                                                         # module for
 
 
 class JsonTools:                                                    # module for operations with json files
-    def __init__(self, json_file):
+    def __init__(self, json_file) -> None:
         self.configuration_file = json_file                         # configuration file path
         with open(self.configuration_file) as json_file:            # open configuration file
             self.content = json.load(json_file)                     # load content from configuration file
 
-    def overwrite_variable(self, variable, value):                  # overwrite a variable in json configuration file
+    def overwrite_variable(self, variable, value) -> None:          # overwrite a variable in json configuration file
         self.content[variable] = value
-        with open(self.configuration_file, 'w') as h:
+        with open(self.configuration_file, 'w') as json_file:
             json_string = json.dumps(self.content, indent=4)
-            h.write(json_string)
+            json_file.write(json_string)

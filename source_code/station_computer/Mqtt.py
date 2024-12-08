@@ -16,9 +16,9 @@ from threading import Timer                                         # module for
 
 
 class Mqtt:                                                         # module for communicating with MQTT broker
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set(<username>, password=<password>)# mqtt broker authorization
+        self.client.username_pw_set('laptop', password='laptop')    # mqtt broker authorization
         self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
@@ -26,23 +26,24 @@ class Mqtt:                                                         # module for
         self.try_connect()                                          # function that tries to establish a connection with MQTT broker
 
     @staticmethod
-    def print_info(msg):                                            # print message with timestamp
+    def print_info(msg) -> None:                                    # print message with timestamp
         print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {msg}')
 
-    def try_connect(self):                                          # try to establish a connection with MQTT broker
+    def try_connect(self) -> None:                                  # try to establish a connection with MQTT broker
         try:
-            self.client.connect(<hostname>, port=<port>)
+            self.client.connect('raspberrypi', port=1883)
             self.client.on_connect = self.on_connect
             self.client.on_message = self.on_message
             self.client.subscribe('azimuth')
             self.client.subscribe('elevation')
             self.client.loop_start()
         except gaierror:
+            self.connected = False
             self.print_info('laptop could not connect to MQTT Broker')
             self.connect_thread = Timer(30, self.try_connect)
             self.connect_thread.start()
 
-    def on_connect(self, client, userdata, flags, rc):              # executed when connection is established
+    def on_connect(self, client, userdata, flags, rc) -> None:      # executed when connection is established
         if rc == 0:
             self.print_info('laptop connected to MQTT broker')
             self.connected = True
@@ -50,7 +51,7 @@ class Mqtt:                                                         # module for
             self.print_info(f'laptop could not connect to MQTT broker, code {rc}')
             self.connected = False
 
-    def on_message(self, client, userdata, message):                # executed when a message is sent
+    def on_message(self, client, userdata, message) -> None:        # executed when a message is sent
         topic = str(message.topic)
         msg = float(str(message.payload.decode('utf-8')))
         msg2 = f'{msg:.2f}'
@@ -59,19 +60,19 @@ class Mqtt:                                                         # module for
         if topic == 'elevation':
             self.el = msg2
 
-    def publish_data(self, d_time, d_azimuth, d_elevation):         # publish data for satellite tracking
+    def publish_data(self, d_time: float, d_azimuth: float, d_elevation: float) -> None:    # publish data for satellite tracking
         self.client.publish('delta_time', str(d_time), 0)
         self.client.publish('delta_azimuth', str(d_azimuth), 0)
         self.client.publish('delta_elevation', str(d_elevation), 0)
 
-    def publish_aos_azimuth(self, start_azimuth):                   # publish AOS azimuth
+    def publish_aos_azimuth(self, start_azimuth: float) -> None:    # publish AOS azimuth
         self.client.publish('start_azimuth', str(start_azimuth), 0)
 
-    def publish_offset(self, offset_name, offset):                  # publish offset
+    def publish_offset(self, offset_name: str, offset: float) -> None:  # publish offset
         self.client.publish(offset_name, str(offset), 0)
 
-    def publish_polarization(self, pol):                            # publish antenna polarization
+    def publish_polarization(self, pol: str) -> None:               # publish antenna polarization
         self.client.publish('polarization', pol, 0)
 
-    def publish_action(self, action):                               # publish action
+    def publish_action(self, action: str) -> None:                  # publish action
         self.client.publish('action', action, 0)
