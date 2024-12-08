@@ -512,7 +512,7 @@ class TrackedSatellite:                                             # object for
                     self.print_info('tracking passed')
                     self.create_data()
             else:
-                self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite} is being tracked')
+                self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite.data['name']} is being tracked')
                 self.create_data()
         else:
             self.print_info(f'cannot be tracked now, because rotator is not connected')

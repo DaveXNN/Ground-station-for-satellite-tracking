@@ -76,7 +76,7 @@ class BeyondTools:                                                  # module for
             data[0].append(orb_date)
             data[1].append(azimuth)
             data[2].append(elevation)
-            if orb.event and orb.event.info.startswith('AOS'):
+            if orb.event and orb.event.info.startswith('AOS') and elevation < 0.1:
                 ok = True
             if orb.event and orb.event.info.startswith('MAX'):
                 if elevation > self.min_max_elevation:
