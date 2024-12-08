@@ -271,7 +271,7 @@ class TrackingTool(Tk):                                             # GUI for sa
             self.tracked_satellites = self.selected_satellites
             self.listbox2.fill(self.tracked_satellites)
             self.json_tool.overwrite_variable('tracked_satellites', self.tracked_satellites)
-            self.tso = [TrackedSatellite(self, sat) for sat in self.tracked_satellites]
+            self.tso = [TrackedSatellite(self, satellite) for satellite in self.tracked_satellites]
             self.find_first_pass()
             self.show_prediction(self.next_satellite.data)
 
