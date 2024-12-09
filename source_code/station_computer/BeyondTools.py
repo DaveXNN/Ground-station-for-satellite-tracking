@@ -64,19 +64,19 @@ class BeyondTools:                                                  # module for
                 if ok and ok2:
                     return data
 
-    def create_data(self, satellite: str) -> list:                  # create data for satellite tracking
+    def create_data(self, satellite: str, init_delay: float = 0) -> list:   # create data for satellite tracking
         data = [[], [], []]
         ok = False
         ok2 = False
         tle = self.get_tle(satellite)
-        for orb in self.station.visibility(tle.orbit(), start=Date.now(), stop=timedelta(days=7), step=timedelta(seconds=10), events=True):
+        for orb in self.station.visibility(tle.orbit(), start=Date.now() + timedelta(hours=init_delay), stop=timedelta(days=7), step=timedelta(seconds=10), events=True):
             orb_date = self.dt_set_utc_timezone(orb.date)
             azimuth = degrees(-orb.theta) % 360
             elevation = degrees(orb.phi)
             data[0].append(orb_date)
             data[1].append(azimuth)
             data[2].append(elevation)
-            if orb.event and orb.event.info.startswith('AOS') and elevation < 0.1:
+            if orb.event and orb.event.info.startswith('AOS'):
                 ok = True
             if orb.event and orb.event.info.startswith('MAX'):
                 if elevation > self.min_max_elevation:

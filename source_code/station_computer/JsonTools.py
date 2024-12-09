@@ -12,8 +12,8 @@ import json                                                         # module for
 
 
 class JsonTools:                                                    # module for operations with json files
-    def __init__(self, json_file) -> None:
-        self.configuration_file = json_file                         # configuration file path
+    def __init__(self, conf_file: str) -> None:
+        self.configuration_file = conf_file                         # configuration file path
         with open(self.configuration_file) as json_file:            # open configuration file
             self.content = json.load(json_file)                     # load content from configuration file
 

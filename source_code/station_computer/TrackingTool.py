@@ -284,7 +284,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.r_az.set(self.mqtt.az)
         self.r_el.set(self.mqtt.el)
-        if self.tracking:
+        if self.tracked_satellite is not None:
             self.r_sat_title.set('Tracked satellite:')
             self.r_time_title.set('Time until LOS:')
             self.r_satellite.set(self.tracked_satellite.data['name'])
@@ -350,11 +350,13 @@ class TrackingTool(Tk):                                             # GUI for sa
         if tsn == 1:
             self.next_satellite = self.tso[0]
         if tsn > 1:
-            new_list = sorted(self.tso, key=lambda p: p.data['aos_time'], reverse=False)
-            first_sat = new_list[0]
-            if first_sat == self.tracked_satellite:
-                first_sat = new_list[1]
-            self.next_satellite = first_sat
+            sorted_list = sorted(self.tso, key=lambda x: x.data['aos_time'], reverse=False)
+            if self.tracked_satellite is None:
+                self.next_satellite = sorted_list[0]
+                self.show_prediction(self.next_satellite.data)
+            else:
+                self.next_satellite = sorted_list[1]
+                self.show_prediction(self.tracked_satellite.data)
         self.next_pass_info.set(f'Next pass: {self.next_satellite.data['name']}, AOS: {self.next_satellite.data['aos_time'].strftime('%d %B %Y %H:%M:%S UTC')}')
 
     def shutdown_rotator(self) -> None:                             # remotely shut down the rotator
@@ -386,7 +388,7 @@ class TrackingTool(Tk):                                             # GUI for sa
 
 
 class MyListbox(Listbox):                                           # object for working with listboxes
-    def __init__(self, app, title_var, title, content, font, rel_x, rel_y, width: float, height: float) -> None:
+    def __init__(self, app: TrackingTool, title_var: StringVar, title: str, content: list, font: str, rel_x: float, rel_y: float, width: float, height: float) -> None:
         super().__init__(app, font=font, bg=app.bg_color, fg=app.text_color, borderwidth=0, highlightbackground='black')
         self.place(relx=rel_x, rely=rel_y, relwidth=width, relheight=height, anchor=CENTER)
         self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
@@ -396,7 +398,7 @@ class MyListbox(Listbox):                                           # object for
         self.content = content                                      # listbox content
         self.fill(content)                                          # fill listbox with the content
 
-    def fill(self, content: list, overwrite=True) -> None:          # fill listbox with content
+    def fill(self, content: list, overwrite: bool = True) -> None:  # fill listbox with content
         if overwrite:
             self.content = content
         self.delete(0, END)
@@ -423,7 +425,7 @@ class MyListbox(Listbox):                                           # object for
 
 
 class Offset:                                                       # object to control azimuth and elevation offset
-    def __init__(self, app, topic_name: str, string_var: StringVar) -> None:
+    def __init__(self, app: TrackingTool, topic_name: str, string_var: StringVar) -> None:
         self.app = app
         self.topic_name = topic_name                                # MQTT topic name
         self.string_var = string_var                                # variable to display offset value
@@ -448,7 +450,7 @@ class Offset:                                                       # object to 
 
 
 class TrackedSatellite:                                             # object for tracked satellites
-    def __init__(self, app, name: str) -> None:
+    def __init__(self, app: TrackingTool, name: str) -> None:
         self.tracking_data = []                                     # list of azims and elevs in time during the pass
         self.data = {'name': name}                                  # dictionary with satellite info
         self.start_time_seconds = 0                                 # time in seconds until AOS
@@ -460,9 +462,9 @@ class TrackedSatellite:                                             # object for
     def print_info(self, msg: str) -> None:                         # print message with satellite name, timestamp
         print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {self.data['name']} {msg}')
 
-    def create_data(self) -> None:                                  # create data about the first pass of satellite
+    def create_data(self, init_delay: float = 0) -> None:           # create data about the first pass of satellite
         self.tracking_data.clear()
-        self.tracking_data = self.app.beyond_tools.create_data(self.data['name'])
+        self.tracking_data = self.app.beyond_tools.create_data(self.data['name'], init_delay=init_delay)
         length = len(self.tracking_data[0]) - 1
         self.data['aos_time'] = self.tracking_data[0][0]
         self.data['los_time'] = self.tracking_data[0][length]
@@ -472,22 +474,19 @@ class TrackedSatellite:                                             # object for
         max_index = self.tracking_data[2].index(self.data['max_el'])
         self.data['max_time'] = self.tracking_data[0][max_index]
         self.data['max_az'] = self.tracking_data[1][max_index]
-        self.start_time_seconds = (self.data['aos_time'] - datetime.now(timezone.utc) - self.delay_before_tracking).seconds
+        self.start_time_seconds = (self.data['aos_time'] - datetime.now(timezone.utc) - self.delay_before_tracking).total_seconds()
         self.tracking_thread = Timer(self.start_time_seconds, self.track)
         self.tracking_thread.start()
-        self.app.find_first_pass()
         self.print_info(f'created data, AOS: {self.data['aos_time'].strftime("%Y-%m-%d %H:%M:%S UTC")}, MAX elevation: {self.data['max_el']}')
 
     def track(self) -> None:                                        # track the satellite
         if self.app.mqtt.connected:
             if not self.app.tracking:
-                if self.data['aos_time'] > datetime.now(timezone.utc):
+                if (self.data['aos_time'] - self.delay_before_tracking) > datetime.now(timezone.utc):
                     self.app.tracking = True
                     self.app.tracked_satellite = self
-                    self.app.ts_los_time = self.data['los_time']
-                    self.app.mqtt.publish_action('start')
                     self.app.find_first_pass()
-                    self.app.show_prediction(self.data)
+                    self.app.mqtt.publish_action('start')
                     wait_time = (self.data['aos_time'] - datetime.now(timezone.utc)).total_seconds()
                     self.print_info(f'will fly over your head in {int(wait_time)} seconds')
                     self.app.mqtt.publish_aos_azimuth(self.data['aos_az'])
@@ -504,17 +503,14 @@ class TrackedSatellite:                                             # object for
                         self.app.mqtt.publish_data(delta_t, delta_az, delta_el)
                         sleep(delta_t)
                     self.app.mqtt.publish_action('stop')
-                    self.print_info('tracking ended')
-                    self.app.tracking = False
                     self.app.tracked_satellite = None
-                    self.app.show_prediction(self.app.next_satellite.data)
+                    self.app.tracking = False
+                    self.print_info('tracking ended')
                 else:
                     self.print_info('tracking passed')
-                    self.create_data()
             else:
                 self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite.data['name']} is being tracked')
-                self.create_data()
         else:
             self.print_info(f'cannot be tracked now, because rotator is not connected')
-            self.create_data()
-            self.app.show_prediction(self.app.next_satellite.data)
+        self.create_data(init_delay=1)
+        self.app.find_first_pass()
