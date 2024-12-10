@@ -32,8 +32,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.program_name = self.json_tool.content['program_name']  # program name
         self.icon = self.json_tool.content['icon']                  # icon file of the program window
         self.iconbitmap(self.icon)                                  # program icon
-        w, h = self.maxsize()
-        self.minsize(w-100, h-100)
+        self.state('zoomed')                                        # maximize the window
         self.bg_color = '#daa520'                                   # background color #1d1f1b
         self.text_color = 'black'                                   # text color
         self.font0 = 'TkTextFont 12'                                # basic font
@@ -43,10 +42,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.title(self.program_name)                               # set program title
 
         # Basic variables
-        self.selected_satellites = self.json_tool.content['tracked_satellites'] # list of satellites selected for tracking
-        for sat in self.selected_satellites:
-            if sat not in self.beyond_tools.satellites:
-                self.selected_satellites.remove(sat)
+        self.selected_satellites = list(set(self.json_tool.content['tracked_satellites']) & set(self.beyond_tools.satellites))  # list of satellites selected for tracking
         self.tracked_satellites = []                                # list of currently tracked satellites (names only)
         self.tso = []                                               # list of TrackedSatellite objects
         self.track_button_pressed = False                           # True if Track button has already been pressed
@@ -482,7 +478,7 @@ class TrackedSatellite:                                             # object for
     def track(self) -> None:                                        # track the satellite
         if self.app.mqtt.connected:
             if not self.app.tracking:
-                if (self.data['aos_time'] - self.delay_before_tracking) > datetime.now(timezone.utc):
+                if (self.data['aos_time'] - self.delay_before_tracking) >= datetime.now(timezone.utc):
                     self.app.tracking = True
                     self.app.tracked_satellite = self
                     self.app.find_first_pass()
