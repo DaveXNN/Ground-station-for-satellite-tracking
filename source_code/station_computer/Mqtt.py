@@ -10,24 +10,18 @@
 
 import paho.mqtt.client as paho                                     # module for subscribing data from MQTT broker
 
-from datetime import datetime, timezone                             # module for operations with date and time
-from socket import gaierror                                         # module for avoiding connection errors
 from threading import Timer                                         # module for running more processes in parallel
 
 
 class Mqtt:                                                         # module for communicating with MQTT broker
     def __init__(self) -> None:
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set(<username>, password=<password>) # mqtt broker authorization
+        self.client.username_pw_set(<username>, password=<password>)    # mqtt broker authorization
         self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
         self.connect_thread = None                                  # thread for connecting to MQTT broker
         self.try_connect()                                          # function that tries to establish a connection with MQTT broker
-
-    @staticmethod
-    def print_info(msg) -> None:                                    # print message with timestamp
-        print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {msg}')
 
     def try_connect(self) -> None:                                  # try to establish a connection with MQTT broker
         try:
@@ -37,18 +31,18 @@ class Mqtt:                                                         # module for
             self.client.subscribe('azimuth')
             self.client.subscribe('elevation')
             self.client.loop_start()
-        except gaierror:
+        except TimeoutError:
             self.connected = False
-            self.print_info('laptop could not connect to MQTT Broker')
+            print('laptop could not connect to MQTT Broker')
             self.connect_thread = Timer(30, self.try_connect)
             self.connect_thread.start()
 
     def on_connect(self, client, userdata, flags, rc) -> None:      # executed when connection is established
         if rc == 0:
-            self.print_info('laptop connected to MQTT broker')
+            print('laptop connected to MQTT broker')
             self.connected = True
         else:
-            self.print_info(f'laptop could not connect to MQTT broker, code {rc}')
+            print(f'laptop could not connect to MQTT broker, code {rc}')
             self.connected = False
 
     def on_message(self, client, userdata, message) -> None:        # executed when a message is sent

@@ -9,433 +9,366 @@
 
 
 from datetime import datetime, timedelta, timezone                  # module for operations with date and time
-from threading import Thread, Timer                                 # module for running more processes in parallel
-from tkinter import *                                               # module for creating GUI
-from tkinter import messagebox                                      # module for dialog windows
+from threading import Timer                                         # module for running more processes in parallel
+from tkinter import *
+from tkinter import messagebox, ttk                                 # module for dialog windows
 from time import sleep                                              # module with sleep() function
 
 from BeyondTools import BeyondTools                                 # module for predicting satellite visibility
+from JsonTools import JsonTools                                     # module for operations with json files
 from Mqtt import Mqtt                                               # module for MQTT communication
+from SatnogsTools import SatnogsTools
+
+
+class Satellite:
+    def __init__(self, **kwargs) -> None:
+        self.satnogs_data = kwargs['satnogs_data']
+        self.name = self.satnogs_data['name']
+        self.norad_id = self.satnogs_data['norad_cat_id']
+        self.tle = self.satnogs_data['tle']
+        self.prediction = dict()
+
+
+class SatelliteList(list):
+    def __init__(self, treeview, content):
+        super().__init__()
+        for x in content:
+            self.append(x)
+        self.treeview = treeview
+        self.on_change()
+
+    def append_sat(self, obj):
+        if obj not in self:
+            self.append(obj)
+            self.on_change()
+
+    def remove_sat(self, obj):
+        if obj in self:
+            self.remove(obj)
+            self.on_change()
+
+    def on_change(self):
+        self.sort(key=lambda x: x.satnogs_data['norad_cat_id'], reverse=False)
+        self.treeview.fill(self)
+        self.treeview.search_var.set('')
 
 
 class TrackingTool(Tk):                                             # GUI for satellite tracking
-    def __init__(self, json_tool, tle_updator) -> None:
+    def __init__(self, configuration_json) -> None:
         super().__init__()
 
-        # Initialize modules
-        self.json_tool = json_tool                                  # module for working with json configuration file
+        # Modules
+        self.json_tool = JsonTools(configuration_json)              # module for working with json configuration file
+        self.satnogs_tools = SatnogsTools()                         # module for updating TLE data
         self.mqtt = Mqtt()                                          # module for MQTT communication
-        self.beyond_tools = BeyondTools(json_tool.content)          # module for satellite pass predictions
-        self.tle_updator = tle_updator                              # module for updating TLE data
+        self.beyond_tools = BeyondTools(self.json_tool.content)     # module for satellite pass predictions
 
-        # Initialize basic GUI variables
+        # Basic variables
         self.program_name = self.json_tool.content['program_name']  # program name
         self.icon = self.json_tool.content['icon']                  # icon file of the program window
         self.iconbitmap(self.icon)                                  # program icon
         self.state('zoomed')                                        # maximize the window
-        self.bg_color = '#daa520'                                   # background color #1d1f1b
-        self.text_color = 'black'                                   # text color
-        self.font0 = 'TkTextFont 12'                                # basic font
-        self.font_title = 'Helvetica 20 bold'                       # font used in main title
-        self.font_subtitle = 'Helvetica 15 bold'                    # font used in subtitles
-        self.configure(bg=self.bg_color)                            # set background color
         self.title(self.program_name)                               # set program title
+        self.font0 = ('Aerial', 11)                                 # basic font
+        self.tracked_satellites = list()                            # list of currently tracked Satellite objects
+        self.tracked_satellite = None                               # currently tracked TrackedSatellite object
+        self.next_satellite = None                                  # first TrackedSatellite to be tracked
 
-        # Basic variables
-        self.selected_satellites = list(set(self.json_tool.content['tracked_satellites']) & set(self.beyond_tools.satellites))  # list of satellites selected for tracking
-        self.tracked_satellites = []                                # list of currently tracked satellites (names only)
-        self.tso = []                                               # list of TrackedSatellite objects
-        self.track_button_pressed = False                           # True if Track button has already been pressed
-        self.tracking = False                                       # True if rotator is currently tracking a satellite
-        self.tracked_satellite = None                               # name of currently tracked satellite
-        self.next_satellite = None                                  # name of the first satellite to be tracked
+        # Treeview
+        self.listbox0 = SatTreeview(self, 'All satellites', 0.125, 0.3, 0.2, 0.15, 'Treeview')
+        self.listbox1 = SatTreeview(self, 'Selected satellites', 0.375, 0.3, 0.2, 0.15, 'Treeview')
+        self.listbox2 = TSTreeview(self, 'Tracked satellites (sorted by AOS)', 0.75, 0.82, 0.45, 0.2, 'Treeview')
+        self.transmitters_treeview = TransmittersTreeview(self, 0.75, 0.57, 0.45, 0.2, 'Treeview')
 
-        # Tkinter string variables
-        self.ss0 = StringVar()                                      # searching in listbox0
-        self.ss1 = StringVar()                                      # searching in listbox1
-        self.listbox_title0 = StringVar()                           # title of All satellites listbox
-        self.listbox_title1 = StringVar()                           # title of Selected satellites listbox
-        self.listbox_title2 = StringVar()                           # title of Tracked satellites listbox
-        self.prediction_title = StringVar()                         # title of pass predictions
-        self.r_sat_title = StringVar()                              # title of Next/Tracked satellite
-        self.r_time_title = StringVar()                             # title of Tracking starts in/Time until LOS
+        # Satellite object lists
+        json_content = self.satnogs_tools.get_satellites()
+        satellites = [Satellite(satnogs_data=sat) for sat in json_content if sat['norad_cat_id'] is not None]
+        self.satellites = SatelliteList(self.listbox0, satellites)  # list of all Satellite objects
+        selected_satellites = [self.satellite_from_name(sat) for sat in self.json_tool.content['tracked_satellites'] if self.satellite_from_name(sat) in satellites]
+        self.selected_satellites = SatelliteList(self.listbox1, selected_satellites)  # list of selected Satellite objects
+
+        # String variables                                          Usage/meaning:
+        self.prediction_title = StringVar(value='First pass prediction:')   # title of pass predictions
+        self.satellite_title = StringVar(value='Tracked satellite:')# title of Next/Tracked satellite
+        self.time_title = StringVar(value='Time until LOS:')        # title of Tracking starts in/Time until LOS
         self.date = StringVar()                                     # date of the pass prediction
         self.aos_time = StringVar()                                 # AOS of the pass prediction
-        self.aos_az = StringVar()                                   # AOS azimuth of the pass prediction
+        self.aos_azimuth = StringVar()                              # AOS azimuth of the pass prediction
         self.max_time = StringVar()                                 # MAX time of the pass prediction
-        self.max_az = StringVar()                                   # MAX azimuth of the pass prediction
-        self.max_el = StringVar()                                   # MAX elevation of the pass prediction
+        self.max_azimuth = StringVar()                              # MAX azimuth of the pass prediction
+        self.max_elevation = StringVar()                            # MAX elevation of the pass prediction
         self.los_time = StringVar()                                 # LOS time of the pass prediction
-        self.los_az = StringVar()                                   # LOS azimuth of the pass prediction
+        self.los_azimuth = StringVar()                              # LOS azimuth of the pass prediction
         self.duration = StringVar()                                 # duration of the satellite pass in pass prediction
         self.utctime = StringVar()                                  # UTC
         self.localtime = StringVar()                                # Local time
-        self.r_az = StringVar()                                     # current rotator azimuth
-        self.r_el = StringVar()                                     # current rotator elevation
-        self.az_offset_var = StringVar()                            # azimuth offset
-        self.el_offset_var = StringVar()                            # elevation offset
+        self.rotator_azimuth = StringVar()                          # current rotator azimuth
+        self.rotator_elevation = StringVar()                        # current rotator elevation
         self.r_satellite = StringVar()                              # Next/Tracked satellite name
         self.r_time_till_los = StringVar()                          # Time until LOS/Tracking starts in
-        self.r_pol = StringVar()                                    # current antenna polarization
+        self.received_frequency = StringVar()                       # received frequency
+        self.doppler_shift = StringVar()                            # doppler shift for received frequency
+        self.antenna_polarization = StringVar()                     # current antenna polarization
         self.mqtt_status = StringVar()                              # MQTT status
-        self.next_pass_info = StringVar()                           # information about the next pass
-        self.tle_info = StringVar()                                 # information about time of the last TLE update
+
+        # Styles and fonts
+        self.background_color = '#daa520'                           # background color
+        self.text_color = 'black'                                   # text color
+        self.configure(bg=self.background_color)                    # configure background color
+        self.style = ttk.Style(self)                                # style
+        self.style.theme_use('clam')                                # theme
+        self.style.configure( 'TLabel', foreground='black', background=self.background_color, font=('Aerial', 12))
+        self.style.configure('Heading0.TLabel', foreground='black', background=self.background_color, font=('Helvetica', 20, 'bold'))
+        self.style.configure('Heading1.TLabel', foreground='black', background=self.background_color, font=('Helvetica', 15, 'bold'))
+        self.style.configure('TEntry', foreground='black', fieldbackground=self.background_color)
+        self.style.map('TEntry', fieldbackground=[('readonly', self.background_color)])
+        self.style.configure('TButton', foreground='black', background=self.background_color, font=('Aerial', 11))
+        self.style.map('TButton', background=[('pressed', self.background_color)])
+        self.style.configure("Treeview", foreground='black', background=self.background_color, backgroundfield=self.background_color, font=('Aerial', 10))
+        self.style.configure("Treeview.Heading", foreground='black', background=self.background_color, font=('Aerial', 10))
+        self.style.map("Treeview.Heading", background=[('pressed', self.background_color)])
+
+        # Labels
+        ttk.Label(self, text=self.program_name, style='Heading0.TLabel').place(relx=0.5, rely=0.05, anchor=CENTER)
+        ttk.Label(self, text='Satellite visibility prediction', style='Heading1.TLabel').place(relx=0.25, rely=0.10, anchor=CENTER)
+        ttk.Label(self, text='Rotator information', style='Heading1.TLabel').place(relx=0.75, rely=0.10, anchor=CENTER)
+        ttk.Label(self, text='Select a satellite by double click and click Predict to predict its first pass:', style='TLabel').place(relx=0.25, rely=0.15, anchor=CENTER)
+        ttk.Label(self, textvariable=self.prediction_title, style='TLabel').place(relx=0.25, rely=0.50, anchor=CENTER)
+        ttk.Label(self, text='Date UTC:', style='TLabel').place(relx=0.05, rely=0.55, anchor=W)
+        ttk.Label(self, text='Acquisition of satellite (AOS):', style='TLabel').place(relx=0.05, rely=0.60, anchor=W)
+        ttk.Label(self, text='AOS azimuth:', style='TLabel').place(relx=0.05, rely=0.65, anchor=W)
+        ttk.Label(self, text='Maximum elevation (MAX):', style='TLabel').place(relx=0.05, rely=0.70, anchor=W)
+        ttk.Label(self, text='MAX azimuth:', style='TLabel').place(relx=0.05, rely=0.75, anchor=W)
+        ttk.Label(self, text='MAX elevation:', style='TLabel').place(relx=0.05, rely=0.80, anchor=W)
+        ttk.Label(self, text='Loss of satellite (LOS):', style='TLabel').place(relx=0.05, rely=0.85, anchor=W)
+        ttk.Label(self, text='LOS azimuth:', style='TLabel').place(relx=0.05, rely=0.90, anchor=W)
+        ttk.Label(self, text='Duration:', style='TLabel').place(relx=0.05, rely=0.95, anchor=W)
+        ttk.Label(self, text='Time UTC:', style='TLabel').place(relx=0.525, rely=0.15, anchor=W)
+        ttk.Label(self, text='Local time:', style='TLabel').place(relx=0.775, rely=0.15, anchor=W)
+        ttk.Label(self, text='Azimuth (AZ):', style='TLabel').place(relx=0.525, rely=0.20, anchor=W)
+        ttk.Label(self, text='Elevation (EL):', style='TLabel').place(relx=0.775, rely=0.20, anchor=W)
+        ttk.Label(self, textvariable=self.satellite_title, style='TLabel').place(relx=0.525, rely=0.30, anchor=W)
+        ttk.Label(self, textvariable=self.time_title, style='TLabel').place(relx=0.775, rely=0.30, anchor=W)
+        ttk.Label(self, text='Frequency (MHz):', style='TLabel').place(relx=0.525, rely=0.35, anchor=W)
+        ttk.Label(self, text='Doppler shift (kHz):', style='TLabel').place(relx=0.775, rely=0.35, anchor=W)
+        ttk.Label(self, text='Antenna polarization:', style='TLabel').place(relx=0.525, rely=0.40, anchor=W)
+        ttk.Label(self, text='MQTT status:', style='TLabel').place(relx=0.525, rely=0.95, anchor=W)
+
+        # Entries
+        ttk.Entry(textvariable=self.date, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.55, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.aos_time, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.60, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.aos_azimuth, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.65, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.max_time, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.70, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.max_azimuth, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.75, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.max_elevation, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.80, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.los_time, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.85, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.los_azimuth, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.90, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.duration, justify=RIGHT, state='readonly', font=self.font0, style='TEntry').place(relx=0.25, rely=0.95, relwidth=0.2, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.utctime, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.625, rely=0.15, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.localtime, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.875, rely=0.15, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.rotator_azimuth, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.625, rely=0.20, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.rotator_elevation, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.875, rely=0.20, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.r_satellite, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.625, rely=0.30, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.r_time_till_los, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.875, rely=0.30, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.received_frequency, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.625, rely=0.35, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.doppler_shift, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.875, rely=0.35, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.antenna_polarization, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.625, rely=0.40, relwidth=0.1, relheight=0.035, anchor=W)
+        ttk.Entry(textvariable=self.mqtt_status, justify=CENTER, state='readonly', font=self.font0, style='TEntry').place(relx=0.625, rely=0.95, relwidth=0.1, relheight=0.035, anchor=W)
+
+        # Buttons
+        ttk.Button(self, text='Predict', command=lambda: self.predict(self.listbox0.entry.get()), style='TButton').place(relx=0.075, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
+        ttk.Button(self, text='Add', command=self.add_to_selected, style='TButton').place(relx=0.175, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
+        ttk.Button(self, text='Remove', command=self.remove_from_selected, style='TButton').place(relx=0.325, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
+        ttk.Button(self, text='Track', command=self.track, style='TButton').place(relx=0.425, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
+        ttk.Button(self, text='Vertical', command=lambda: self.set_polarization('Vertical'), style='TButton').place(relx=0.775, rely=0.40, relwidth=0.05, relheight=0.04, anchor=W)
+        ttk.Button(self, text='Horizontal', command=lambda: self.set_polarization('Horizontal'), style='TButton').place(relx=0.825, rely=0.40, relwidth=0.05, relheight=0.04, anchor=W)
+        ttk.Button(self, text='LHCP', command=lambda: self.set_polarization('LHCP'), style='TButton').place(relx=0.875, rely=0.40, relwidth=0.05, relheight=0.04, anchor=W)
+        ttk.Button(self, text='RHCP', command=lambda: self.set_polarization('RHCP'), style='TButton').place(relx=0.925, rely=0.40, relwidth=0.05, relheight=0.04, anchor=W)
+        ttk.Button(self, text='Shut down rotator', command=self.shutdown_rotator, style='TButton').place(relx=0.775, rely=0.95, relwidth=0.1, relheight=0.04, anchor=W)
+        ttk.Button(self, text='Quit', command=self.close_window, style='TButton').place(relx=0.875, rely=0.95, relwidth=0.1, relheight=0.04, anchor=W)
 
         # Azimuth and elevation offsets
-        self.az_offset = Offset(self,'az_offset', self.az_offset_var)   # azimuth offset
-        self.el_offset = Offset(self,'el_offset', self.el_offset_var)   # elevation offset
-
-        # Listbox definition
-        self.listbox0 = MyListbox(self, self.listbox_title0, 'All satellites', self.beyond_tools.satellites, self.font0, 0.125, 0.3, 0.2, 0.15)
-        self.listbox1 = MyListbox(self, self.listbox_title1, 'Selected satellites', self.selected_satellites, self.font0, 0.375,0.3, 0.2, 0.15)
-        self.listbox2 = MyListbox(self, self.listbox_title2, 'Tracked satellites', self.tracked_satellites, self.font0, 0.75, 0.75, 0.2, 0.35)
-
-        # Labels definition
-        self.main_title = Label(self, text=self.program_name, font=self.font_title, bg=self.bg_color, fg=self.text_color)
-        self.main_title.place(relx=0.5, rely=0.05, anchor=CENTER)
-        self.left_title = Label(self, text='Predicting satellite visibility', font=self.font_subtitle, bg=self.bg_color, fg=self.text_color)
-        self.left_title.place(relx=0.25, rely=0.10, anchor=CENTER)
-        self.right_title = Label(self, text='Rotator information', font=self.font_subtitle, bg=self.bg_color, fg=self.text_color)
-        self.right_title.place(relx=0.75, rely=0.10, anchor=CENTER)
-        self.ll00 = Label(self, text='Select a satellite by double click and click Predict to predict its first pass:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll00.place(relx=0.25, rely=0.15, anchor=CENTER)
-        self.ll01 = Label(self, textvariable=self.listbox_title0, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll01.place(relx=0.125, rely=0.20, anchor=CENTER)
-        self.ll02 = Label(self, textvariable=self.listbox_title1, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll02.place(relx=0.375, rely=0.20, anchor=CENTER)
-        self.ll03 = Label(self, textvariable=self.prediction_title, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll03.place(relx=0.25, rely=0.50, anchor=CENTER)
-        self.ll04 = Label(self, text='Date UTC:', bg=self.bg_color, font=self.font0, fg=self.text_color)
-        self.ll04.place(relx=0.05, rely=0.55, anchor=W)
-        self.ll05 = Label(self, text='Acquisition of satellite (AOS):', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll05.place(relx=0.05, rely=0.60, anchor=W)
-        self.ll06 = Label(self, text='AOS azimuth:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll06.place(relx=0.05, rely=0.65, anchor=W)
-        self.ll07 = Label(self, text='Maximum elevation (MAX):', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll07.place(relx=0.05, rely=0.70, anchor=W)
-        self.ll08 = Label(self, text='MAX azimuth:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll08.place(relx=0.05, rely=0.75, anchor=W)
-        self.ll09 = Label(self, text='MAX elevation:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll09.place(relx=0.05, rely=0.80, anchor=W)
-        self.ll10 = Label(self, text='Loss of satellite (LOS):', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll10.place(relx=0.05, rely=0.85, anchor=W)
-        self.ll11 = Label(self, text='LOS azimuth:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll11.place(relx=0.05, rely=0.90, anchor=W)
-        self.ll12 = Label(self, text='Duration:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.ll12.place(relx=0.05, rely=0.95, anchor=W)
-        self.rl00 = Label(self, text='Time UTC:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl00.place(relx=0.525, rely=0.15, anchor=W)
-        self.rl01 = Label(self, text='Local time:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl01.place(relx=0.775, rely=0.15, anchor=W)
-        self.rl02 = Label(self, text='Azimuth (AZ):', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl02.place(relx=0.525, rely=0.20, anchor=W)
-        self.rl03 = Label(self, text='Elevation (EL):', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl03.place(relx=0.775, rely=0.20, anchor=W)
-        self.rl04 = Label(self, text='AZ offset:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl04.place(relx=0.525, rely=0.25, anchor=W)
-        self.rl05 = Label(self, text='EL offset:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl05.place(relx=0.775, rely=0.25, anchor=W)
-        self.rl06 = Label(self, textvariable=self.r_sat_title, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl06.place(relx=0.525, rely=0.30, anchor=W)
-        self.rl07 = Label(self, textvariable=self.r_time_title, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl07.place(relx=0.775, rely=0.30, anchor=W)
-        self.rl08 = Label(self, text='Antenna polarization:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl08.place(relx=0.525, rely=0.35, anchor=W)
-        self.rl09 = Label(self, text='MQTT status:', font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl09.place(relx=0.525, rely=0.40, anchor=W)
-        self.rl10 = Label(self, textvariable=self.next_pass_info, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl10.place(relx=0.750, rely=0.47, anchor=CENTER)
-        self.rl11 = Label(self, textvariable=self.listbox_title2, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl11.place(relx=0.750, rely=0.55, anchor=CENTER)
-        self.rl12 = Label(self, textvariable=self.tle_info, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.rl12.place(relx=0.750, rely=0.95, anchor=CENTER)
-
-        # Entries definition
-        self.sat_entry0 = Entry(textvariable=self.ss0, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.sat_entry0.place(relx=0.125, rely=0.40, relwidth=0.2, relheight=0.035, anchor=CENTER)
-        self.sat_entry0.bind('<Return>', func=lambda event: self.listbox0.search(event, self.ss0.get()))
-        self.sat_entry1 = Entry(textvariable=self.ss1, font=self.font0, bg=self.bg_color, fg=self.text_color)
-        self.sat_entry1.place(relx=0.375, rely=0.40, relwidth=0.2, relheight=0.035, anchor=CENTER)
-        self.sat_entry1.bind('<Return>', func=lambda event: self.listbox1.search(event, self.ss1.get()))
-        self.le0 = Entry(textvariable=self.date, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le0.place(relx=0.25, rely=0.55, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le1 = Entry(textvariable=self.aos_time, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le1.place(relx=0.25, rely=0.60, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le2 = Entry(textvariable=self.aos_az, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le2.place(relx=0.25, rely=0.65, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le3 = Entry(textvariable=self.max_time, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le3.place(relx=0.25, rely=0.70, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le4 = Entry(textvariable=self.max_az, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le4.place(relx=0.25, rely=0.75, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le5 = Entry(textvariable=self.max_el, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le5.place(relx=0.25, rely=0.80, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le6 = Entry(textvariable=self.los_time, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le6.place(relx=0.25, rely=0.85, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le7 = Entry(textvariable=self.los_az, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le7.place(relx=0.25, rely=0.90, relwidth=0.2, relheight=0.035, anchor=W)
-        self.le8 = Entry(textvariable=self.duration, font=self.font0, justify=RIGHT, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.le8.place(relx=0.25, rely=0.95, relwidth=0.2, relheight=0.035, anchor=W)
-        self.re0 = Entry(textvariable=self.utctime, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re0.place(relx=0.625, rely=0.15, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re1 = Entry(textvariable=self.localtime, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re1.place(relx=0.875, rely=0.15, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re2 = Entry(textvariable=self.r_az, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re2.place(relx=0.625, rely=0.20, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re3 = Entry(textvariable=self.r_el, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re3.place(relx=0.875, rely=0.20, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re4 = Entry(textvariable=self.az_offset_var, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re4.place(relx=0.650, rely=0.25, relwidth=0.05, relheight=0.035, anchor=W)
-        self.re5 = Entry(textvariable=self.el_offset_var, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re5.place(relx=0.900, rely=0.25, relwidth=0.05, relheight=0.035, anchor=W)
-        self.re6 = Entry(textvariable=self.r_satellite, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re6.place(relx=0.625, rely=0.30, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re7 = Entry(textvariable=self.r_time_till_los, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re7.place(relx=0.875, rely=0.30, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re8 = Entry(textvariable=self.r_pol, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re8.place(relx=0.625, rely=0.35, relwidth=0.1, relheight=0.035, anchor=W)
-        self.re9 = Entry(textvariable=self.mqtt_status, font=self.font0, justify=CENTER, state='readonly', readonlybackground=self.bg_color, fg=self.text_color)
-        self.re9.place(relx=0.625, rely=0.40, relwidth=0.1, relheight=0.035, anchor=W)
-
-        # Buttons definition
-        self.predict_button = Button(self, text='Predict', font=self.font0, command=lambda: self.predict(self.sat_entry0.get()), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.predict_button.place(relx=0.075, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
-        self.add_button = Button(self, text='Add to tracking', font=self.font0, command=self.add_to_tracked, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.add_button.place(relx=0.175, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
-        self.remove_button = Button(self, text='Remove from tracking', font=self.font0, command=self.remove_from_tracked, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.remove_button.place(relx=0.325, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
-        self.track_button = Button(self, text='Track', font=self.font0, command=self.start_tracking, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.track_button.place(relx=0.425, rely=0.45, relwidth=0.1, relheight=0.04, anchor=CENTER)
-        self.ver_pol = Button(self, text='Vertical', font=self.font0, command=lambda: self.set_polarization('Vertical'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.ver_pol.place(relx=0.775, rely=0.35, relwidth=0.05, relheight=0.04, anchor=W)
-        self.hor_pol = Button(self, text='Horizontal', font=self.font0, command=lambda: self.set_polarization('Horizontal'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.hor_pol.place(relx=0.825, rely=0.35, relwidth=0.05, relheight=0.04, anchor=W)
-        self.lhcp_pol = Button(self, text='LHCP', font=self.font0, command=lambda: self.set_polarization('LHCP'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.lhcp_pol.place(relx=0.875, rely=0.35, relwidth=0.05, relheight=0.04, anchor=W)
-        self.rhcp_pol = Button(self, text='RHCP', font=self.font0, command=lambda: self.set_polarization('RHCP'), bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.rhcp_pol.place(relx=0.925, rely=0.35, relwidth=0.05, relheight=0.04, anchor=W)
-        self.shutdown_button = Button(self, text='Shut down rotator', font=self.font0, command=self.shutdown_rotator, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.shutdown_button.place(relx=0.775, rely=0.40, relwidth=0.1, relheight=0.04, anchor=W)
-        self.close_button = Button(self, text='Quit', font=self.font0, command=self.close_window, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.close_button.place(relx=0.875, rely=0.40, relwidth=0.1, relheight=0.04, anchor=W)
-        self.az_inc_button = Button(self, text='+', font=self.font0, command=self.az_offset.increase, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.az_inc_button.place(relx=0.625, rely=0.25, relwidth=0.025, relheight=0.035, anchor=W)
-        self.az_dec_button = Button(self, text='-', font=self.font0, command=self.az_offset.decrease, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.az_dec_button.place(relx=0.700, rely=0.25, relwidth=0.025, relheight=0.035, anchor=W)
-        self.el_inc_button = Button(self, text='+', font=self.font0, command=self.el_offset.increase, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.el_inc_button.place(relx=0.875, rely=0.25, relwidth=0.025, relheight=0.035, anchor=W)
-        self.el_dec_button = Button(self, text='-', font=self.font0, command=self.el_offset.decrease, bg=self.bg_color, fg=self.text_color, activebackground=self.bg_color)
-        self.el_dec_button.place(relx=0.950, rely=0.25, relwidth=0.025, relheight=0.035, anchor=W)
-
-        # Set text of some of the string variables
-        self.prediction_title.set('First pass prediction:')
-        self.r_pol.set('Vertical')
-        self.tle_info.set(f'Last TLE update: {self.tle_updator.last_update.strftime("%d %B %Y %H:%M:%S UTC")}')
+        self.az_offset = Offset(self, 'AZ offset:', 'az_offset', 0.625, 0.25)  # azimuth offset
+        self.el_offset = Offset(self, 'EL offset:', 'el_offset', 0.875, 0.25)  # elevation offset
 
         # run basic functions
+        self.set_polarization('Vertical')                           # set polarization to Vertical
         self.update_rotator_info()                                  # display rotator information every 1 second
-        self.tracking_thread = None                                 # thread for starting satellite tracking
-        self.mainloop()
+        self.mainloop()                                             # start GUI
 
     @staticmethod
-    def timedelta_formatter(td) -> str:                             # function that returns timedelta object in string format %H %M %S
+    def timedelta_formatter(td: timedelta) -> str:                  # function that returns timedelta object in string format %H %M %S
         hours, remainder = divmod(td.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         return f'{hours:02}:{minutes:02}:{seconds:02}'
 
-    def add_to_tracked(self) -> None:                               # add satellite to tracked satellite list
-        sat = self.sat_entry0.get()
-        if sat in self.beyond_tools.satellites and sat not in self.selected_satellites:
-            self.selected_satellites.append(sat)
-            self.selected_satellites = sorted(self.selected_satellites)
-        self.listbox1.fill(self.selected_satellites)
-        self.ss0.set('')
+    def satellite_from_name(self, name: str) -> Satellite:
+        for sat in self.satellites:
+            if name == sat.name:
+                return sat
 
-    def remove_from_tracked(self) -> None:                          # remove satellite from tracked satellites list
-        sat = self.sat_entry1.get()
-        if sat in self.selected_satellites:
-            self.selected_satellites.remove(sat)
-        self.listbox1.fill(self.selected_satellites)
-        self.ss1.set('')
+    def tracked_satellite_from_name(self, name: str):
+        for sat in self.tracked_satellites:
+            if name == sat.name:
+                return sat
 
-    def start_tracking(self) -> None:                               # start satellite tracking
-        self.tracking_thread = Thread(target=self.track_satellites, daemon=True)
-        self.tracking_thread.start()
+    def get_type(self, name: str):
+        result1 = self.tracked_satellite_from_name(name)
+        if result1 is not None:
+            return result1
+        result2 = self.satellite_from_name(name)
+        if result2 is not None:
+            return result2
+        else:
+            return None
 
-    def track_satellites(self) -> None:                             # track all satellites in track_satellites list
-        if not self.track_button_pressed:
-            self.track_button_pressed = True
-            self.tracked_satellites = self.selected_satellites
-            self.listbox2.fill(self.tracked_satellites)
-            self.json_tool.overwrite_variable('tracked_satellites', self.tracked_satellites)
-            self.tso = [TrackedSatellite(self, satellite) for satellite in self.tracked_satellites]
-            self.find_first_pass()
-            self.show_prediction(self.next_satellite.data)
+    def predict(self, name: str) -> None:                           # create data about the first pass of selected satellite
+        satellite = self.get_type(name)
+        if isinstance(satellite, TrackedSatellite):
+            self.show_prediction(satellite)
+        elif isinstance(satellite, Satellite):
+            satellite.prediction = self.beyond_tools.predict_first_pass(satellite.tle)
+            if not self.show_prediction(satellite):
+                self.empty_prediction(f'There is no pass of {name} within next {self.beyond_tools.max_pred_time.days} days.')
+        else:
+            self.prediction_title.set(f'{name} is not a satellite in orbit around the Earth.')
 
-    def set_polarization(self, pol: str) -> None:                   # remotely set antenna polarization
-        self.r_pol.set(pol)
-        self.mqtt.publish_polarization(pol)
+    def add_to_selected(self) -> None:                               # add satellite to tracked satellite list
+        sat = self.satellite_from_name(self.listbox0.entry.get())
+        self.selected_satellites.append_sat(sat)
+
+    def remove_from_selected(self) -> None:                          # remove satellite from tracked satellites list
+        sat = self.satellite_from_name(self.listbox1.entry.get())
+        self.selected_satellites.remove_sat(sat)
+
+    def track(self) -> None:                                        # track all satellites in track_satellites list
+        self.tracked_satellites = [TrackedSatellite(self, satnogs_data=satellite.satnogs_data) for satellite in self.selected_satellites if not isinstance(self.get_type(satellite.name), TrackedSatellite)]
+        for satellite in self.tracked_satellites:
+            if self.satellite_from_name(satellite.name) not in self.selected_satellites:
+                try:
+                    satellite.tracking_thread.cancel()
+                except AttributeError:
+                    pass
+                self.tracked_satellites.remove(satellite)
+        track_sats_names = [satellite.name for satellite in self.tracked_satellites]
+        self.json_tool.overwrite_variable('tracked_satellites', track_sats_names)
+        self.find_first_pass()
 
     def update_rotator_info(self) -> None:                          # display rotator information every 1 second
         self.utctime.set(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
         self.localtime.set(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        self.r_az.set(self.mqtt.az)
-        self.r_el.set(self.mqtt.el)
-        if self.tracked_satellite is not None:
-            self.r_sat_title.set('Tracked satellite:')
-            self.r_time_title.set('Time until LOS:')
-            self.r_satellite.set(self.tracked_satellite.data['name'])
-            self.r_time_till_los.set(self.timedelta_formatter(self.tracked_satellite.data['los_time'] - datetime.now(timezone.utc)))
-        else:
-            self.r_sat_title.set('Next satellite:')
-            self.r_time_title.set('Tracking starts in:')
-            if self.next_satellite is not None:
-                self.r_satellite.set(self.next_satellite.data['name'])
-                self.r_time_till_los.set(self.timedelta_formatter(self.next_satellite.data['aos_time'] - datetime.now(timezone.utc)))
+        self.rotator_azimuth.set(self.mqtt.az)
+        self.rotator_elevation.set(self.mqtt.el)
+        if self.tracked_satellite is None and self.next_satellite is not None:
+            self.r_time_till_los.set(self.timedelta_formatter(self.next_satellite.prediction['aos_time'] - datetime.now(timezone.utc)))
+        elif self.tracked_satellite is not None:
+            self.r_time_till_los.set(self.timedelta_formatter(self.tracked_satellite.prediction['los_time'] - datetime.now(timezone.utc)))
         if self.mqtt.connected:
             self.mqtt_status.set('connected')
         else:
             self.mqtt_status.set('disconnected')
         self.after(1000, self.update_rotator_info)
 
-    def predict(self, satellite: str) -> None:                      # create data about the first pass of selected satellite
-        if satellite == '':
-            return
-        if satellite in self.beyond_tools.satellites:
-            if satellite in self.tracked_satellites:
-                for sat in self.tso:
-                    if sat.data['name'] == satellite:
-                        self.show_prediction(sat.data)
-            else:
-                data = self.beyond_tools.predict_first_pass(satellite)
-                try:
-                    self.show_prediction(data)
-                except NameError:
-                    self.prediction_title.set(f'Sorry, could not predict {satellite}.')
-                    self.empty_prediction()
-        else:
-            self.prediction_title.set(f'{satellite} is not a satellite in orbit around the Earth.')
+    def set_polarization(self, pol: str) -> None:                   # remotely set antenna polarization
+        self.antenna_polarization.set(pol)
+        self.mqtt.publish_polarization(pol)
 
-    def show_prediction(self, prediction: dict) -> None:            # display satellite prediction data
-        self.prediction_title.set(f'First pass prediction for {prediction['name']}: ')
-        self.date.set(prediction['aos_time'].strftime('%d %B %Y'))
-        self.aos_time.set(prediction['aos_time'].strftime('%H:%M:%S'))
-        self.aos_az.set(f'{prediction['aos_az']:.2f}')
-        self.max_time.set(prediction['max_time'].strftime('%H:%M:%S'))
-        self.max_az.set(f'{prediction['max_az']:.2f}')
-        self.max_el.set(f'{prediction['max_el']:.2f}')
-        self.los_time.set(prediction['los_time'].strftime('%H:%M:%S'))
-        self.los_az.set(f'{prediction['los_az']:.2f}')
-        self.duration.set(self.timedelta_formatter(prediction['los_time'] - prediction['aos_time']))
+    def show_prediction(self, satellite: Satellite) -> bool:        # display satellite prediction data
+        try:
+            self.prediction_title.set(f'First pass prediction for {satellite.name}: ')
+            self.date.set(satellite.prediction['aos_time'].strftime('%d %B %Y'))
+            self.aos_time.set(satellite.prediction['aos_time'].strftime('%H:%M:%S'))
+            self.aos_azimuth.set(f'{satellite.prediction['aos_az']:.2f}')
+            self.max_time.set(satellite.prediction['max_time'].strftime('%H:%M:%S'))
+            self.max_azimuth.set(f'{satellite.prediction['max_az']:.2f}')
+            self.max_elevation.set(f'{satellite.prediction['max_el']:.2f}')
+            self.los_time.set(satellite.prediction['los_time'].strftime('%H:%M:%S'))
+            self.los_azimuth.set(f'{satellite.prediction['los_az']:.2f}')
+            self.duration.set(self.timedelta_formatter(satellite.prediction['los_time'] - satellite.prediction['aos_time']))
+            return True
+        except KeyError:
+            return False
 
-    def empty_prediction(self) -> None:                             # clear satellite prediction data
-        self.prediction_title.set('First pass prediction:')
+    def empty_prediction(self, title: str) -> None:                 # clear satellite prediction data
+        self.prediction_title.set(title)
         self.date.set('')
         self.aos_time.set('')
-        self.aos_az.set('')
+        self.aos_azimuth.set('')
         self.max_time.set('')
-        self.max_az.set('')
-        self.max_el.set('')
+        self.max_azimuth.set('')
+        self.max_elevation.set('')
         self.los_time.set('')
-        self.los_az.set('')
+        self.los_azimuth.set('')
         self.duration.set('')
 
     def find_first_pass(self) -> None:                              # find the first satellite in tracked satellites that will appear above the horizont
-        tsn = len(self.tso)
+        tsn = len(self.tracked_satellites)
         if tsn == 0:
             return
         if tsn == 1:
-            self.next_satellite = self.tso[0]
+            self.next_satellite = self.tracked_satellites[0]
         if tsn > 1:
-            sorted_list = sorted(self.tso, key=lambda x: x.data['aos_time'], reverse=False)
+            self.tracked_satellites.sort(key=lambda x: x.prediction['aos_time'], reverse=False)
+            self.listbox2.fill()
             if self.tracked_satellite is None:
-                self.next_satellite = sorted_list[0]
-                self.show_prediction(self.next_satellite.data)
+                self.next_satellite = self.tracked_satellites[0]
+                self.satellite_title.set('Next satellite:')
+                self.time_title.set('AOS in:')
+                self.r_satellite.set(self.next_satellite.name)
+                self.show_prediction(self.next_satellite)
+                self.transmitters_treeview.fill(self.next_satellite)
             else:
-                self.next_satellite = sorted_list[1]
-                self.show_prediction(self.tracked_satellite.data)
-        self.next_pass_info.set(f'Next pass: {self.next_satellite.data['name']}, AOS: {self.next_satellite.data['aos_time'].strftime('%d %B %Y %H:%M:%S UTC')}')
+                self.next_satellite = self.tracked_satellites[1]
+                self.satellite_title.set('Tracked satellite:')
+                self.time_title.set('LOS in:')
+                self.r_satellite.set(self.tracked_satellite.name)
+                self.show_prediction(self.tracked_satellite)
 
     def shutdown_rotator(self) -> None:                             # remotely shut down the rotator
         if self.mqtt.connected:
-            if self.tracking:
+            if self.tracked_satellite is not None:
                 messagebox.showinfo(title='Information', message='You cannot shut down the rotator while tracking.')
             elif messagebox.askokcancel(title='Information', message='Are you sure to shut down the rotator?'):
                 self.mqtt.publish_action('shutdown')
+        else:
+            messagebox.showinfo(title='Information', message='Rotator is not connected')
 
     def close_window(self) -> None:                                 # close Satellite Tracking Software
-        if self.tracking:
+        if self.tracked_satellite is not None:
             messagebox.showinfo(title='Information', message=f'You cannot close {self.program_name} while tracking.')
         elif messagebox.askokcancel(title='Information', message=f'Are you sure to quit {self.program_name}?'):
             try:
                 self.mqtt.connect_thread.cancel()
             except AttributeError:
                 pass
-            try:
-                self.tracking_thread.join()
-            except AttributeError:
-                pass
-            self.tle_updator.update_thread.cancel()
-            for x in self.tso:
+            for satellite in self.tracked_satellites:
                 try:
-                    x.tracking_thread.cancel()
+                    satellite.tracking_thread.cancel()
                 except AttributeError:
                     pass
             self.destroy()
 
 
-class MyListbox(Listbox):                                           # object for working with listboxes
-    def __init__(self, app: TrackingTool, title_var: StringVar, title: str, content: list, font: str, rel_x: float, rel_y: float, width: float, height: float) -> None:
-        super().__init__(app, font=font, bg=app.bg_color, fg=app.text_color, borderwidth=0, highlightbackground='black')
-        self.place(relx=rel_x, rely=rel_y, relwidth=width, relheight=height, anchor=CENTER)
-        self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
-        self.app = app
-        self.title_var = title_var                                  # variable for listbox title
-        self.title = title                                          # listbox title
-        self.content = content                                      # listbox content
-        self.fill(content)                                          # fill listbox with the content
-
-    def fill(self, content: list, overwrite: bool = True) -> None:  # fill listbox with content
-        if overwrite:
-            self.content = content
-        self.delete(0, END)
-        for item in content:
-            self.insert(END, item)
-        self.title_var.set(''.join([self.title, ' (', str(len(content)), '):']))
-
-    def select(self, event) -> None:                                # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
-        cs = self.get(self.curselection())
-        self.app.ss0.set(cs)
-        self.app.ss1.set(cs)
-
-    def search(self, event, word: str) -> None:                     # fill listbox with filtered satellite names you search
-        word = word.upper()
-        self.delete(0, END)
-        if word == '':
-            self.fill(self.content, overwrite=False)
-            return
-        filtered_data = list()
-        for item in self.content:
-            if item.find(word) >= 0:
-                filtered_data.append(item)
-        self.fill(filtered_data, overwrite=False)
-
-
 class Offset:                                                       # object to control azimuth and elevation offset
-    def __init__(self, app: TrackingTool, topic_name: str, string_var: StringVar) -> None:
+    offset_step = 0.1                                               # step of changing the offset
+    def __init__(self, app: TrackingTool, offset_name: str, topic_name: str, rel_x: float, rel_y) -> None:
         self.app = app
         self.topic_name = topic_name                                # MQTT topic name
-        self.string_var = string_var                                # variable to display offset value
+        self.string_var = StringVar()                               # variable to display offset value
+        ttk.Label(self.app, text=offset_name, style='TLabel').place(relx=rel_x - 0.1, rely=rel_y, anchor=W)
+        ttk.Entry(self.app, textvariable=self.string_var, justify=CENTER, state='readonly', font=self.app.font0, style='TEntry').place(relx=rel_x+0.025, rely=rel_y, relwidth=0.05, relheight=0.035, anchor=W)
+        ttk.Button(self.app, text='+', command=self.increase, style='TButton').place(relx=rel_x, rely=rel_y, relwidth=0.025, relheight=0.035, anchor=W)
+        ttk.Button(self.app, text='-', command=self.decrease, style='TButton').place(relx=rel_x + 0.075, rely=rel_y, relwidth=0.025, relheight=0.035, anchor=W)
         self.offset = 0.0                                           # offset value
-        self.offset_step = 0.1                                      # step of changing the offset
         self.publish()
 
     def increase(self) -> None:                                     # increase offset by one step
-        if not self.app.tracking and self.app.mqtt.connected:
+        if self.app.tracked_satellite is None and self.app.mqtt.connected:
             self.offset += self.offset_step
             self.publish()
 
     def decrease(self) -> None:                                     # decrease offset by one step
-        if not self.app.tracking and self.app.mqtt.connected:
+        if self.app.tracked_satellite is None and self.app.mqtt.connected:
             self.offset -= self.offset_step
             self.publish()
 
@@ -445,68 +378,196 @@ class Offset:                                                       # object to 
         self.app.mqtt.publish_offset(self.topic_name, self.offset)
 
 
-class TrackedSatellite:                                             # object for tracked satellites
-    def __init__(self, app: TrackingTool, name: str) -> None:
-        self.tracking_data = []                                     # list of azims and elevs in time during the pass
-        self.data = {'name': name}                                  # dictionary with satellite info
-        self.start_time_seconds = 0                                 # time in seconds until AOS
-        self.delay_before_tracking = timedelta(seconds=10)          # time needed for rotator to turn to AOS azimuth
+class SatTreeview(ttk.Treeview):                                    # List of satellites in GUI
+    def __init__(self, app: TrackingTool, title: str, rel_x: float, rel_y: float, width: float, height: float, style: str) -> None:
         self.app = app
+        super().__init__(app, selectmode='browse', style=style)
+        self['columns'] = ('Satellite', 'NORAD')
+        self.column('#0', width=0, stretch=NO)
+        self.column('Satellite', anchor=W, width=180)
+        self.column('NORAD', anchor=CENTER, width=20)
+        self.heading('#0', text='', anchor=W)
+        self.heading('Satellite', text='Satellite', anchor=W)
+        self.heading('NORAD', text='NORAD', anchor=CENTER)
+        self.place(relx=rel_x, rely=rel_y, relwidth=width, relheight=height, anchor=CENTER)
+        self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
+        self.title_text = StringVar()
+        self.search_var = StringVar()
+        ttk.Label(self.app, textvariable=self.title_text, style='TLabel').place(relx=rel_x, rely=rel_y - (0.5 * height) - 0.025, anchor=CENTER)
+        self.entry = ttk.Entry(textvariable=self.search_var, font=self.app.font0, style='TEntry')
+        self.entry.place(relx=rel_x, rely=rel_y + (0.5 * height) + 0.025, relwidth=0.2, relheight=0.035, anchor=CENTER)
+        self.entry.bind('<Return>', func=lambda event: self.search(event, self.search_var.get()))
+        self.title_name = title                                     # listbox title
+        self.content = list()
+
+    def fill(self, content: list, overwrite: bool = True) -> None:  # fill listbox with content
+        if overwrite:
+            self.content = content
+        self.delete(*self.get_children())
+        for item in content:
+            self.insert(parent='', values=(item.name, item.norad_id), index='end')
+        self.title_text.set(f'{self.title_name} ({len(content)}):')
+
+    def select(self, event) -> None:                                # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
+        self.search_var.set(self.item(self.focus())['values'][0])
+
+    def search(self, event, word: str) -> None:                     # fill listbox with filtered satellite names you search
+        if word == '':
+            self.fill(self.content, overwrite=False)
+            return
+        filtered_data = list()
+        for item in self.content:
+            if word.lower() in item.name.lower() or word in str(item.norad_id):
+                filtered_data.append(item)
+        self.fill(filtered_data, overwrite=False)
+
+
+class TransmittersTreeview(ttk.Treeview):
+    def __init__(self, app: TrackingTool, rel_x: float, rel_y: float, width: float, height: float, style: str) -> None:
+        self.app = app
+        super().__init__(app, selectmode='browse', style=style)
+        self['columns'] = ('Name', 'Frequency', 'Type', 'Mode')
+        self.column('#0', width=0, stretch=NO)
+        self.column('Name', anchor=W, width=180)
+        self.column('Frequency', anchor=CENTER, width=20)
+        self.column('Type', anchor=CENTER, width=20)
+        self.column('Mode', anchor=CENTER, width=20)
+        self.heading('#0', text='', anchor=W)
+        self.heading('Name', text='Name', anchor=W)
+        self.heading('Frequency', text='Frequency (MHz)', anchor=CENTER)
+        self.heading('Type', text='Type', anchor=CENTER)
+        self.heading('Mode', text='Mode', anchor=CENTER)
+        self.place(relx=rel_x, rely=rel_y, relwidth=width, relheight=height, anchor=CENTER)
+        self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
+        self.title_text = StringVar(value='Active transmitters:')
+        ttk.Label(self.app, textvariable=self.title_text, style='TLabel').place(relx=rel_x, rely=rel_y - (0.5 * height) - 0.025, anchor=CENTER)
+        self.satellite = None
+
+    def fill(self, satellite) -> None:                              # fill listbox with content
+        self.satellite = satellite
+        self.delete(*self.get_children())
+        for item in satellite.transmitters:
+            if item['alive'] == True and item['status'] == 'active':
+                self.insert(parent='', values=(item['description'], f'{float((item['downlink_low'])/1000000):.3f}', item['type'], item['mode']), index='end')
+        self.title_text.set(f'{satellite.name} - active transmitters ({len(satellite.transmitters)}):')
+
+    def select(self, event) -> None:                                # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
+        cs = self.focus()
+        self.app.received_frequency.set(str(self.item(cs)['values'][1]))
+        self.satellite.calc_rotator_data()
+
+
+class TSTreeview(ttk.Treeview):
+    def __init__(self, app: TrackingTool, title: str, rel_x: float, rel_y: float, width: float, height: float, style: str) -> None:
+        self.app = app
+        super().__init__(app, selectmode='browse', style=style)
+        self['columns'] = ('Satellite', 'NORAD', 'Date', 'AOS', 'MAX', 'LOS', 'Duration')
+        self.column('#0', width=0, stretch=NO)
+        self.column('Satellite', anchor=W, width=100)
+        self.column('NORAD', anchor=CENTER, width=20)
+        self.column('Date', anchor=CENTER, width=20)
+        self.column('AOS', anchor=CENTER, width=20)
+        self.column('MAX', anchor=CENTER, width=20)
+        self.column('LOS', anchor=CENTER, width=20)
+        self.column('Duration', anchor=CENTER, width=20)
+        self.heading('#0', text='', anchor=W)
+        self.heading('Satellite', text='Satellite', anchor=W)
+        self.heading('NORAD', text='NORAD', anchor=CENTER)
+        self.heading('Date', text='Date UTC', anchor=CENTER)
+        self.heading('AOS', text='AOS', anchor=CENTER)
+        self.heading('MAX', text='MAX', anchor=CENTER)
+        self.heading('LOS', text='LOS', anchor=CENTER)
+        self.heading('Duration', text='Duration', anchor=CENTER)
+        self.place(relx=rel_x, rely=rel_y, relwidth=width, relheight=height, anchor=CENTER)
+        self.title_text = StringVar()
+        ttk.Label(self.app, textvariable=self.title_text, style='TLabel').place(relx=rel_x, rely=rel_y - (0.5 * height) - 0.025, anchor=CENTER)
+        self.title_name = title                                     # listbox title
+        self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
+
+    def fill(self) -> None:                                         # fill listbox with content
+        self.delete(*self.get_children())
+        for item in self.app.tracked_satellites:
+            self.insert(parent='', values=(item.name, item.norad_id, item.prediction['aos_time'].strftime('%d %B %Y'), item.prediction['aos_time'].strftime('%H:%M:%S'), item.prediction['max_time'].strftime('%H:%M:%S'), item.prediction['los_time'].strftime('%H:%M:%S'), self.app.timedelta_formatter(item.prediction['los_time'] - item.prediction['aos_time'])), index='end')
+        self.title_text.set(f'{self.title_name} ({len(self.app.tracked_satellites)}):')
+
+    def select(self, event) -> None:                                # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
+        self.app.show_prediction(self.app.tracked_satellite_from_name(self.item(self.focus())['values'][0]))
+
+
+class TrackedSatellite(Satellite):                                  # object for tracked satellites
+    delay_before_tracking = timedelta(seconds=10)                   # time needed for rotator to turn to AOS azimuth
+
+    def __init__(self, app: TrackingTool, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.app = app
+        self.transmitters = self.app.satnogs_tools.get_transmitters(self.norad_id)
+        self.tracking_data = list()                                 # list of azims and elevs in time during the pass
+        self.rotator_data = []
+        self.start_time = float()                                   # time until AOS in seconds
         self.tracking_thread = None
         self.create_data()
 
-    def print_info(self, msg: str) -> None:                         # print message with satellite name, timestamp
-        print(f'{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}, {self.data['name']} {msg}')
-
     def create_data(self, init_delay: float = 0) -> None:           # create data about the first pass of satellite
         self.tracking_data.clear()
-        self.tracking_data = self.app.beyond_tools.create_data(self.data['name'], init_delay=init_delay)
-        length = len(self.tracking_data[0]) - 1
-        self.data['aos_time'] = self.tracking_data[0][0]
-        self.data['los_time'] = self.tracking_data[0][length]
-        self.data['aos_az'] = self.tracking_data[1][0]
-        self.data['los_az'] = self.tracking_data[1][length]
-        self.data['max_el'] = max(self.tracking_data[2])
-        max_index = self.tracking_data[2].index(self.data['max_el'])
-        self.data['max_time'] = self.tracking_data[0][max_index]
-        self.data['max_az'] = self.tracking_data[1][max_index]
-        self.start_time_seconds = (self.data['aos_time'] - datetime.now(timezone.utc) - self.delay_before_tracking).total_seconds()
-        self.tracking_thread = Timer(self.start_time_seconds, self.track)
-        self.tracking_thread.start()
-        self.print_info(f'created data, AOS: {self.data['aos_time'].strftime("%Y-%m-%d %H:%M:%S UTC")}, MAX elevation: {self.data['max_el']}')
+        self.tracking_data = self.app.beyond_tools.create_data(self.tle, init_delay=init_delay)
+        if len(self.tracking_data) == 4:
+            self.tracking_data2fp()
+            self.calc_rotator_data()
+            self.start_time = (self.prediction['aos_time'] - datetime.now(timezone.utc) - self.delay_before_tracking).total_seconds()
+            self.tracking_thread = Timer(self.start_time, self.track)
+            self.tracking_thread.start()
+        else:
+            self.app.tracked_satellites.remove(self)
 
     def track(self) -> None:                                        # track the satellite
-        if self.app.mqtt.connected:
-            if not self.app.tracking:
-                if (self.data['aos_time'] - self.delay_before_tracking) >= datetime.now(timezone.utc):
-                    self.app.tracking = True
-                    self.app.tracked_satellite = self
-                    self.app.find_first_pass()
-                    self.app.mqtt.publish_action('start')
-                    wait_time = (self.data['aos_time'] - datetime.now(timezone.utc)).total_seconds()
-                    self.print_info(f'will fly over your head in {int(wait_time)} seconds')
-                    self.app.mqtt.publish_aos_azimuth(self.data['aos_az'])
-                    sleep(wait_time)
-                    self.print_info('tracking started')
-                    for x in range(len(self.tracking_data[0]) - 1):
-                        delta_t = (self.tracking_data[0][x + 1] - self.tracking_data[0][x]).total_seconds()
-                        delta_az = self.tracking_data[1][x + 1] - self.tracking_data[1][x]
-                        delta_el = self.tracking_data[2][x + 1] - self.tracking_data[2][x]
-                        if delta_az > 180:
-                            delta_az -= 360
-                        if delta_az < -180:
-                            delta_az += 360
-                        self.app.mqtt.publish_data(delta_t, delta_az, delta_el)
-                        sleep(delta_t)
-                    self.app.mqtt.publish_action('stop')
-                    self.app.tracked_satellite = None
-                    self.app.tracking = False
-                    self.print_info('tracking ended')
-                else:
-                    self.print_info('tracking passed')
-            else:
-                self.print_info(f'cannot be tracked now, because {self.app.tracked_satellite.data['name']} is being tracked')
-        else:
-            self.print_info(f'cannot be tracked now, because rotator is not connected')
+        if self.app.mqtt.connected and self.app.tracked_satellite is None:
+            if (self.prediction['aos_time'] - self.delay_before_tracking) >= datetime.now(timezone.utc):
+                self.app.tracked_satellite = self
+                self.app.find_first_pass()
+                self.app.mqtt.publish_action('start')
+                wait_time = (self.prediction['aos_time'] - datetime.now(timezone.utc)).total_seconds()
+                self.app.mqtt.publish_aos_azimuth(self.prediction['aos_az'])
+                sleep(wait_time)
+                for delta_t, delta_az, delta_el, doppler in self.rotator_data:
+                    self.app.mqtt.publish_data(delta_t, delta_az, delta_el)
+                    self.app.doppler_shift.set(f'{(doppler/1000):.3f}')
+                    sleep(delta_t)
+                self.app.mqtt.publish_action('stop')
+                self.app.doppler_shift.set('')
+                self.app.tracked_satellite = None
         self.create_data(init_delay=1)
         self.app.find_first_pass()
+
+    def tracking_data2fp(self) -> None:
+        self.prediction.clear()
+        los_index = len(self.tracking_data[0]) - 1
+        self.prediction['aos_time'] = self.tracking_data[0][0]
+        self.prediction['los_time'] = self.tracking_data[0][los_index]
+        self.prediction['aos_az'] = self.tracking_data[1][0]
+        self.prediction['los_az'] = self.tracking_data[1][los_index]
+        self.prediction['max_el'] = max(self.tracking_data[2])
+        max_index = self.tracking_data[2].index(self.prediction['max_el'])
+        self.prediction['max_time'] = self.tracking_data[0][max_index]
+        self.prediction['max_az'] = self.tracking_data[1][max_index]
+
+    @staticmethod
+    def calculate_doppler(fc: float, ds: float, dt: float) -> float:
+        c = 299792458                                               # speed of light in vacuum
+        return -(fc * ds)/(c * dt)
+
+    def calc_rotator_data(self) -> None:
+        self.rotator_data.clear()
+        for x in range(len(self.tracking_data[0]) - 1):
+            delta_t = (self.tracking_data[0][x + 1] - self.tracking_data[0][x]).total_seconds()
+            delta_az = self.tracking_data[1][x + 1] - self.tracking_data[1][x]
+            delta_el = self.tracking_data[2][x + 1] - self.tracking_data[2][x]
+            delta_s = self.tracking_data[3][x + 1] - self.tracking_data[3][x]
+            if self.app.received_frequency.get() != '':
+                doppler = self.calculate_doppler(float(self.app.received_frequency.get())*1000000, delta_s, delta_t)
+            else:
+                doppler = 0.0
+            if delta_az > 180:
+                delta_az -= 360
+            if delta_az < -180:
+                delta_az += 360
+            self.rotator_data.append((delta_t, delta_az, delta_el, doppler))
