@@ -8,10 +8,11 @@
     "tracked_satellites": [
         "NOAA 15",
         "ISS",
+        "CUBESAT XI-IV",
         "NOAA 18",
+        "CUBESAT XI-V",
         "NOAA 19",
         "SWISSCUBE",
-        "XW-3",
         "VZLUSAT-2",
         "LASARsat"
     ]

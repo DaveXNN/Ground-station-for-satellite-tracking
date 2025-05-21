@@ -55,30 +55,35 @@ class BeyondTools:                                                  # module for
                     return data
         return {}
 
-    def create_data(self, tle1: str, init_delay: float = 0) -> list:   # create data for satellite tracking
-        data = [[], [], [], []]
+    def create_data(self, tle1: str, delay: float) -> tuple:                       # create data for satellite tracking
+        data = list()
+        prediction = dict()
         ok = False
         ok2 = False
         tle = Tle(tle1)
-        for orb in self.station.visibility(tle.orbit(), start=Date.now() + timedelta(hours=init_delay), stop=self.max_pred_time, step=self.prediction_step, events=True):
+        for orb in self.station.visibility(tle.orbit(), start=Date.now() + timedelta(hours=delay), stop=self.max_pred_time, step=self.prediction_step, events=True):
             orb_date = self.dt_set_utc_timezone(orb.date)
             azimuth = degrees(-orb.theta) % 360
             elevation = degrees(orb.phi)
-            data[0].append(orb_date)
-            data[1].append(azimuth)
-            data[2].append(elevation)
-            data[3].append(orb.r)
+            data.append((orb_date, azimuth, elevation, orb.r))
             if orb.event and orb.event.info.startswith('AOS'):
+                prediction['aos_time'] = orb_date
+                prediction['aos_az'] = azimuth
                 ok = True
             if orb.event and orb.event.info.startswith('MAX'):
                 if elevation > self.min_max_elevation:
                     ok2 = True
+                    prediction['max_time'] = orb_date
+                    prediction['max_az'] = azimuth
+                    prediction['max_el'] = elevation
                 else:
                     ok = False
                     ok2 = False
             if orb.event and orb.event.info.startswith('LOS'):
                 if ok and ok2:
-                    return data
+                    prediction['los_az'] = azimuth
+                    prediction['los_time'] = orb_date
+                    return data, prediction
                 else:
-                    data = [[], [], [], []]
-        return []
+                    data.clear()
+        return [], {}

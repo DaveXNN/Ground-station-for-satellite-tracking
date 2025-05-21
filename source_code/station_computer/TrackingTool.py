@@ -17,16 +17,7 @@ from time import sleep                                              # module wit
 from BeyondTools import BeyondTools                                 # module for predicting satellite visibility
 from JsonTools import JsonTools                                     # module for operations with json files
 from Mqtt import Mqtt                                               # module for MQTT communication
-from SatnogsTools import SatnogsTools
-
-
-class Satellite:
-    def __init__(self, **kwargs) -> None:
-        self.satnogs_data = kwargs['satnogs_data']
-        self.name = self.satnogs_data['name']
-        self.norad_id = self.satnogs_data['norad_cat_id']
-        self.tle = self.satnogs_data['tle']
-        self.prediction = dict()
+from SatnogsTools import SatnogsTools, Satellite                    # module for downloading data from Satnogs
 
 
 class SatelliteList(list):
@@ -38,17 +29,17 @@ class SatelliteList(list):
         self.on_change()
 
     def append_sat(self, obj):
-        if obj not in self:
+        if obj not in self and obj is not None:
             self.append(obj)
             self.on_change()
 
     def remove_sat(self, obj):
-        if obj in self:
+        if obj in self and obj is not None:
             self.remove(obj)
             self.on_change()
 
     def on_change(self):
-        self.sort(key=lambda x: x.satnogs_data['norad_cat_id'], reverse=False)
+        self.sort(key=lambda x: x.norad_id, reverse=False)
         self.treeview.fill(self)
         self.treeview.search_var.set('')
 
@@ -81,8 +72,7 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.transmitters_treeview = TransmittersTreeview(self, 0.75, 0.57, 0.45, 0.2, 'Treeview')
 
         # Satellite object lists
-        json_content = self.satnogs_tools.get_satellites()
-        satellites = [Satellite(satnogs_data=sat) for sat in json_content if sat['norad_cat_id'] is not None]
+        satellites = self.satnogs_tools.get_satellites()
         self.satellites = SatelliteList(self.listbox0, satellites)  # list of all Satellite objects
         selected_satellites = [self.satellite_from_name(sat) for sat in self.json_tool.content['tracked_satellites'] if self.satellite_from_name(sat) in satellites]
         self.selected_satellites = SatelliteList(self.listbox1, selected_satellites)  # list of selected Satellite objects
@@ -194,7 +184,6 @@ class TrackingTool(Tk):                                             # GUI for sa
         # run basic functions
         self.set_polarization('Vertical')                           # set polarization to Vertical
         self.update_rotator_info()                                  # display rotator information every 1 second
-        self.mainloop()                                             # start GUI
 
     @staticmethod
     def timedelta_formatter(td: timedelta) -> str:                  # function that returns timedelta object in string format %H %M %S
@@ -227,7 +216,8 @@ class TrackingTool(Tk):                                             # GUI for sa
         if isinstance(satellite, TrackedSatellite):
             self.show_prediction(satellite)
         elif isinstance(satellite, Satellite):
-            satellite.prediction = self.beyond_tools.predict_first_pass(satellite.tle)
+            tle = self.satnogs_tools.find_tle(satellite.norad_id)
+            satellite.prediction = self.beyond_tools.predict_first_pass(tle)
             if not self.show_prediction(satellite):
                 self.empty_prediction(f'There is no pass of {name} within next {self.beyond_tools.max_pred_time.days} days.')
         else:
@@ -242,13 +232,10 @@ class TrackingTool(Tk):                                             # GUI for sa
         self.selected_satellites.remove_sat(sat)
 
     def track(self) -> None:                                        # track all satellites in track_satellites list
-        self.tracked_satellites = [TrackedSatellite(self, satnogs_data=satellite.satnogs_data) for satellite in self.selected_satellites if not isinstance(self.get_type(satellite.name), TrackedSatellite)]
+        self.tracked_satellites.extend([TrackedSatellite(self, satellite.name, satellite.norad_id) for satellite in self.selected_satellites if not isinstance(self.get_type(satellite.name), TrackedSatellite)])
         for satellite in self.tracked_satellites:
-            if self.satellite_from_name(satellite.name) not in self.selected_satellites:
-                try:
-                    satellite.tracking_thread.cancel()
-                except AttributeError:
-                    pass
+            if self.satellite_from_name(satellite.name) not in self.selected_satellites or len(satellite.transmitters) == 0:
+                satellite.tracking_thread.cancel()
                 self.tracked_satellites.remove(satellite)
         track_sats_names = [satellite.name for satellite in self.tracked_satellites]
         self.json_tool.overwrite_variable('tracked_satellites', track_sats_names)
@@ -337,15 +324,9 @@ class TrackingTool(Tk):                                             # GUI for sa
         if self.tracked_satellite is not None:
             messagebox.showinfo(title='Information', message=f'You cannot close {self.program_name} while tracking.')
         elif messagebox.askokcancel(title='Information', message=f'Are you sure to quit {self.program_name}?'):
-            try:
-                self.mqtt.connect_thread.cancel()
-            except AttributeError:
-                pass
+            self.mqtt.stop_thread = True
             for satellite in self.tracked_satellites:
-                try:
-                    satellite.tracking_thread.cancel()
-                except AttributeError:
-                    pass
+                satellite.tracking_thread.cancel()
             self.destroy()
 
 
@@ -450,12 +431,14 @@ class TransmittersTreeview(ttk.Treeview):
             if item['alive'] == True and item['status'] == 'active':
                 self.insert(parent='', values=(item['description'], f'{float((item['downlink_low'])/1000000):.3f}', item['type'], item['mode']), index='end')
         self.title_text.set(f'{satellite.name} - active transmitters ({len(satellite.transmitters)}):')
+        self.app.received_frequency.set(f'{float((satellite.transmitters[0]['downlink_low'])/1000000):.3f}')
+        self.app.frequency = float(satellite.transmitters[0]['downlink_low'])
 
     def select(self, event) -> None:                                # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
-        cs = self.focus()
-        self.app.received_frequency.set(str(self.item(cs)['values'][1]))
-        self.satellite.calc_rotator_data()
-
+        if self.satellite.name == self.app.r_satellite.get():
+            cs = self.focus()
+            self.app.received_frequency.set(self.item(cs)['values'][1])
+            self.app.frequency = int(float(self.item(cs)['values'][1]) * 1000000)
 
 class TSTreeview(ttk.Treeview):
     def __init__(self, app: TrackingTool, title: str, rel_x: float, rel_y: float, width: float, height: float, style: str) -> None:
@@ -483,6 +466,7 @@ class TSTreeview(ttk.Treeview):
         ttk.Label(self.app, textvariable=self.title_text, style='TLabel').place(relx=rel_x, rely=rel_y - (0.5 * height) - 0.025, anchor=CENTER)
         self.title_name = title                                     # listbox title
         self.bind('<Double-1>', self.select)                        # bind double click on an item in listbox with select function
+        self.fill()
 
     def fill(self) -> None:                                         # fill listbox with content
         self.delete(*self.get_children())
@@ -492,27 +476,27 @@ class TSTreeview(ttk.Treeview):
 
     def select(self, event) -> None:                                # when you click on a name in listbox, it will be displayed in ss0 and ss1 entry
         self.app.show_prediction(self.app.tracked_satellite_from_name(self.item(self.focus())['values'][0]))
+        self.app.transmitters_treeview.fill(self.app.tracked_satellite_from_name(self.item(self.focus())['values'][0]))
 
 
 class TrackedSatellite(Satellite):                                  # object for tracked satellites
-    delay_before_tracking = timedelta(seconds=10)                   # time needed for rotator to turn to AOS azimuth
+    delay_before_tracking = timedelta(seconds=15)                   # time needed for rotator to turn to AOS azimuth
 
-    def __init__(self, app: TrackingTool, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, app: TrackingTool, *args) -> None:
+        super().__init__(*args)
         self.app = app
         self.transmitters = self.app.satnogs_tools.get_transmitters(self.norad_id)
+        self.tle = self.app.satnogs_tools.find_tle(self.norad_id)
         self.tracking_data = list()                                 # list of azims and elevs in time during the pass
         self.rotator_data = []
         self.start_time = float()                                   # time until AOS in seconds
         self.tracking_thread = None
         self.create_data()
 
-    def create_data(self, init_delay: float = 0) -> None:           # create data about the first pass of satellite
+    def create_data(self, delay: float = 0) -> None:                # create data about the first pass of satellite
         self.tracking_data.clear()
-        self.tracking_data = self.app.beyond_tools.create_data(self.tle, init_delay=init_delay)
-        if len(self.tracking_data) == 4:
-            self.tracking_data2fp()
-            self.calc_rotator_data()
+        self.tracking_data, self.prediction = self.app.beyond_tools.create_data(self.tle, delay=delay)
+        if len(self.tracking_data) > 0:
             self.start_time = (self.prediction['aos_time'] - datetime.now(timezone.utc) - self.delay_before_tracking).total_seconds()
             self.tracking_thread = Timer(self.start_time, self.track)
             self.tracking_thread.start()
@@ -521,53 +505,34 @@ class TrackedSatellite(Satellite):                                  # object for
 
     def track(self) -> None:                                        # track the satellite
         if self.app.mqtt.connected and self.app.tracked_satellite is None:
-            if (self.prediction['aos_time'] - self.delay_before_tracking) >= datetime.now(timezone.utc):
+            if (self.prediction['aos_time'] - self.delay_before_tracking + timedelta(seconds=5)) >= datetime.now(timezone.utc):
                 self.app.tracked_satellite = self
                 self.app.find_first_pass()
                 self.app.mqtt.publish_action('start')
                 wait_time = (self.prediction['aos_time'] - datetime.now(timezone.utc)).total_seconds()
-                self.app.mqtt.publish_aos_azimuth(self.prediction['aos_az'])
+                self.app.mqtt.publish_aos_data(self.prediction['aos_az'])
                 sleep(wait_time)
-                for delta_t, delta_az, delta_el, doppler in self.rotator_data:
-                    self.app.mqtt.publish_data(delta_t, delta_az, delta_el)
+                a = 0
+                for utc_time, azimuth, elevation, distance in self.tracking_data:
+                    if a == 0:
+                        a += 1
+                        continue
+                    self.app.mqtt.publish_position(utc_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'), azimuth, elevation)
+                    delta_t = (utc_time - self.tracking_data[a - 1][0]).total_seconds()
+                    delta_s = self.tracking_data[a + 1][3] - distance
+                    doppler = self.calculate_doppler(float(self.app.received_frequency.get()) * 1000000, delta_s, delta_t)
                     self.app.doppler_shift.set(f'{(doppler/1000):.3f}')
-                    sleep(delta_t)
+                    if a >= 2:
+                        sleep(delta_t)
+                    a += 1
                 self.app.mqtt.publish_action('stop')
+                self.app.received_frequency.set('')
                 self.app.doppler_shift.set('')
                 self.app.tracked_satellite = None
-        self.create_data(init_delay=1)
+        self.create_data(delay=1)
         self.app.find_first_pass()
-
-    def tracking_data2fp(self) -> None:
-        self.prediction.clear()
-        los_index = len(self.tracking_data[0]) - 1
-        self.prediction['aos_time'] = self.tracking_data[0][0]
-        self.prediction['los_time'] = self.tracking_data[0][los_index]
-        self.prediction['aos_az'] = self.tracking_data[1][0]
-        self.prediction['los_az'] = self.tracking_data[1][los_index]
-        self.prediction['max_el'] = max(self.tracking_data[2])
-        max_index = self.tracking_data[2].index(self.prediction['max_el'])
-        self.prediction['max_time'] = self.tracking_data[0][max_index]
-        self.prediction['max_az'] = self.tracking_data[1][max_index]
 
     @staticmethod
     def calculate_doppler(fc: float, ds: float, dt: float) -> float:
         c = 299792458                                               # speed of light in vacuum
         return -(fc * ds)/(c * dt)
-
-    def calc_rotator_data(self) -> None:
-        self.rotator_data.clear()
-        for x in range(len(self.tracking_data[0]) - 1):
-            delta_t = (self.tracking_data[0][x + 1] - self.tracking_data[0][x]).total_seconds()
-            delta_az = self.tracking_data[1][x + 1] - self.tracking_data[1][x]
-            delta_el = self.tracking_data[2][x + 1] - self.tracking_data[2][x]
-            delta_s = self.tracking_data[3][x + 1] - self.tracking_data[3][x]
-            if self.app.received_frequency.get() != '':
-                doppler = self.calculate_doppler(float(self.app.received_frequency.get())*1000000, delta_s, delta_t)
-            else:
-                doppler = 0.0
-            if delta_az > 180:
-                delta_az -= 360
-            if delta_az < -180:
-                delta_az += 360
-            self.rotator_data.append((delta_t, delta_az, delta_el, doppler))

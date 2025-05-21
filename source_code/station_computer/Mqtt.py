@@ -9,64 +9,62 @@
 
 
 import paho.mqtt.client as paho                                     # module for subscribing data from MQTT broker
-
-from threading import Timer                                         # module for running more processes in parallel
+from threading import Thread                                        # module for running more processes in parallel
 
 
 class Mqtt:                                                         # module for communicating with MQTT broker
     def __init__(self) -> None:
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set(<username>, password=<password>)    # mqtt broker authorization
+        self.client.username_pw_set('station_computer', password='station_computer')    # mqtt broker authorization
         self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
-        self.connect_thread = None                                  # thread for connecting to MQTT broker
-        self.try_connect()                                          # function that tries to establish a connection with MQTT broker
+        self.connect_thread = Thread(target=self.try_connect, args=(lambda: self.stop_thread, ))
+        self.connect_thread.start()
+        self.stop_thread = False
 
-    def try_connect(self) -> None:                                  # try to establish a connection with MQTT broker
-        try:
-            self.client.connect(<hostname>, port=<port>)
-            self.client.on_connect = self.on_connect
-            self.client.on_message = self.on_message
-            self.client.subscribe('azimuth')
-            self.client.subscribe('elevation')
-            self.client.loop_start()
-        except TimeoutError:
-            self.connected = False
-            print('laptop could not connect to MQTT Broker')
-            self.connect_thread = Timer(30, self.try_connect)
-            self.connect_thread.start()
+    def try_connect(self, stop_thread) -> None:                                  # try to establish a connection with MQTT broker
+        while not self.client.is_connected():
+            try:
+                self.client.connect('192.168.15.119', port=1883, keepalive=5)
+                self.client.on_connect = self.on_connect
+                self.client.on_message = self.on_message
+                self.client.subscribe('azimuth')
+                self.client.subscribe('elevation')
+                self.client.loop_start()
+            except (TimeoutError, OSError):
+                pass
+            if stop_thread:
+                break
 
     def on_connect(self, client, userdata, flags, rc) -> None:      # executed when connection is established
         if rc == 0:
-            print('laptop connected to MQTT broker')
+            print('connected to MQTT broker')
             self.connected = True
         else:
-            print(f'laptop could not connect to MQTT broker, code {rc}')
+            print(f'could not connect to MQTT broker, code {rc}')
             self.connected = False
 
     def on_message(self, client, userdata, message) -> None:        # executed when a message is sent
         topic = str(message.topic)
-        msg = float(str(message.payload.decode('utf-8')))
-        msg2 = f'{msg:.2f}'
+        msg = str(message.payload.decode('utf-8'))
         if topic == 'azimuth':
-            self.az = msg2
+            self.az = f'{float(msg):.2f}'
         if topic == 'elevation':
-            self.el = msg2
+            self.el = f'{float(msg):.2f}'
 
-    def publish_data(self, d_time: float, d_azimuth: float, d_elevation: float) -> None:    # publish data for satellite tracking
-        self.client.publish('delta_time', str(d_time), 0)
-        self.client.publish('delta_azimuth', str(d_azimuth), 0)
-        self.client.publish('delta_elevation', str(d_elevation), 0)
+    def publish_position(self, time: float, azimuth: float, elevation: float) -> None:    # publish data for satellite tracking
+        data_string = f'{time} {azimuth} {elevation}'
+        self.client.publish('position', data_string, 2)
 
-    def publish_aos_azimuth(self, start_azimuth: float) -> None:    # publish AOS azimuth
-        self.client.publish('start_azimuth', str(start_azimuth), 0)
+    def publish_aos_data(self, start_azimuth: float) -> None:    # publish AOS azimuth
+        self.client.publish('aos_data', str(start_azimuth), 2)
 
     def publish_offset(self, offset_name: str, offset: float) -> None:  # publish offset
-        self.client.publish(offset_name, str(offset), 0)
+        self.client.publish(offset_name, str(offset), 2)
 
     def publish_polarization(self, pol: str) -> None:               # publish antenna polarization
-        self.client.publish('polarization', pol, 0)
+        self.client.publish('polarization', pol, 2)
 
     def publish_action(self, action: str) -> None:                  # publish action
-        self.client.publish('action', action, 0)
+        self.client.publish('action', action, 2)

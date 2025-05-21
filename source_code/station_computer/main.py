@@ -12,4 +12,5 @@ from TrackingTool import TrackingTool                               # Satellite 
 
 
 if __name__ == '__main__':
-    TrackingTool('configuration.json')
+    app = TrackingTool('configuration.json')
+    app.mainloop()
