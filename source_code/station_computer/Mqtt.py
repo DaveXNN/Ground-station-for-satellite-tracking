@@ -15,7 +15,7 @@ from threading import Thread                                        # module for
 class Mqtt:                                                         # module for communicating with MQTT broker
     def __init__(self) -> None:
         self.client = paho.Client()                                 # create mqtt client
-        self.client.username_pw_set('station_computer', password='station_computer')    # mqtt broker authorization
+        self.client.username_pw_set(<username>, password=<password>)    # mqtt broker authorization
         self.connected = False                                      # connection indicator
         self.az = '0.00'                                            # rotator azimuth
         self.el = '0.00'                                            # rotator elevation
@@ -26,7 +26,7 @@ class Mqtt:                                                         # module for
     def try_connect(self, stop_thread) -> None:                                  # try to establish a connection with MQTT broker
         while not self.client.is_connected():
             try:
-                self.client.connect('192.168.15.119', port=1883, keepalive=5)
+                self.client.connect(<hostname>, port=<port>, keepalive=5)
                 self.client.on_connect = self.on_connect
                 self.client.on_message = self.on_message
                 self.client.subscribe('azimuth')
